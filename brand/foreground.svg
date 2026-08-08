@@ -1,0 +1,27 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="aFront" x1="100" y1="42" x2="100" y2="164" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7dd3fc" />
+      <stop offset="0.45" stop-color="#3b82f6" />
+      <stop offset="1" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(100,100) scale(0.52) translate(-100,-100)">
+    <g transform="translate(6,8)" stroke="#050a18" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+      <path d="M100 30 L32 176" />
+      <path d="M100 30 L168 176" />
+      <path d="M64 120 L136 120" />
+    </g>
+    <g stroke="url(#aFront)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M100 30 L32 176" />
+      <path d="M100 30 L168 176" />
+      <path d="M64 120 L136 120" />
+    </g>
+    <g transform="translate(-4,-5)" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0.45">
+      <path d="M100 30 L32 176" />
+      <path d="M100 30 L168 176" />
+      <path d="M64 120 L136 120" />
+    </g>
+  </g>
+</svg>
