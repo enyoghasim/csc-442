@@ -1,7 +1,7 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <g transform="translate(100,100) scale(0.52) translate(-100,-100)" stroke="#ffffff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M100 30 L32 176" />
-    <path d="M100 30 L168 176" />
-    <path d="M64 120 L136 120" />
+    <path d="M100 28 L30 178" />
+    <path d="M100 28 L170 178" />
+    <path d="M60 122 L140 122" />
   </g>
 </svg>
