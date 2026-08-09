@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './button';
 import { ThemedText } from './themed-text';
 
@@ -13,7 +14,7 @@ export const HomeScreen = () => {
   const router = useRouter();
 
   return (
-    <View className="flex-1 bg-black p-4">
+    <SafeAreaView edges={['top']} className="flex-1 bg-black p-4">
       <ThemedText variant="title">Welcome back</ThemedText>
 
       <View className="mt-6 rounded-xl border border-zinc-700 p-4">
@@ -28,7 +29,7 @@ export const HomeScreen = () => {
         ))}
       </View>
 
-      <Button title="Scan QR" onPress={() => router.push('/scanner')} className="mt-6" />
-    </View>
+      <Button title="Scan QR" onPress={() => router.push('/(app)/scanner')} className="mt-6" />
+    </SafeAreaView>
   );
 };

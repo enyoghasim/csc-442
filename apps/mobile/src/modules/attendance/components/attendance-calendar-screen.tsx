@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, View } from 'react-native';
 import { Calendar, type DateData } from 'react-native-calendars';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../shared/components/button';
 import { ThemedText } from '../../shared/components/themed-text';
 
@@ -29,7 +30,7 @@ export const AttendanceCalendarScreen = () => {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   return (
-    <View className="flex-1 bg-black p-4">
+    <SafeAreaView edges={['top']} className="flex-1 bg-black p-4">
       <ThemedText variant="title" className="mb-4">
         My Attendance
       </ThemedText>
@@ -47,6 +48,6 @@ export const AttendanceCalendarScreen = () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };

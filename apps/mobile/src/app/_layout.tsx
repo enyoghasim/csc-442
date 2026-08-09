@@ -3,6 +3,8 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../global.css';
 import { queryClient } from '../modules/shared/services/query-client';
 
@@ -30,21 +32,24 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          headerStyle: { backgroundColor: '#000000' },
-          headerTitleStyle: { fontFamily: 'Google Sans SemiBold', color: '#ffffff' },
-          headerTintColor: '#ffffff',
-          contentStyle: { backgroundColor: '#000000' },
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="login" options={{ headerShown: true, title: 'Log in' }} />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: true, title: 'Scan QR' }} />
-      </Stack>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              headerStyle: { backgroundColor: '#000000' },
+              headerTitleStyle: { fontFamily: 'Google Sans SemiBold', color: '#ffffff' },
+              headerTintColor: '#ffffff',
+              contentStyle: { backgroundColor: '#000000' },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(app)" />
+          </Stack>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

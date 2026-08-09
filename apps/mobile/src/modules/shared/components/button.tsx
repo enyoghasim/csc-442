@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
-import { ActivityIndicator, TouchableOpacity, TouchableOpacityProps, View } from 'react-native';
+import { TouchableOpacity, TouchableOpacityProps, View } from 'react-native';
 import { cn } from '../lib/util';
+import { Spinner } from './spinner';
 import { ThemedText } from './themed-text';
 
 type ButtonVariant = 'light' | 'outline-light' | 'outline-dark' | 'danger';
@@ -60,7 +61,7 @@ export const Button = forwardRef<View, ButtonProps>(
         className={cn('items-center justify-center rounded-lg', sizeStyles[size], variantStyles[variant], isDisabled && 'opacity-50', className)}
       >
         {loading ? (
-          <ActivityIndicator color={spinnerColors[variant]} />
+          <Spinner color={spinnerColors[variant]} />
         ) : (
           title && (
             <ThemedText weight="semibold" className={cn('text-center', textSizeStyles[size], textVariantStyles[variant], textClassName)}>

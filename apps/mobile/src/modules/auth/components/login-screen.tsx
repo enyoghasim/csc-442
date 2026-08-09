@@ -1,29 +1,87 @@
-import { Image, View } from 'react-native';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm } from 'react-hook-form';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLoginMutation } from '../services/auth.mutation';
+import { loginSchema, LoginValues } from '../validations/auth';
 import { Button } from '../../shared/components/button';
-import { ThemedText } from '../../shared/components/themed-text';
+import { ErrorMessage } from '../../shared/components/error-message';
+import { Input } from '../../shared/components/input';
 
-// Placeholder only — no form/validation/API call wired yet (Sprint 1). No register screen exists
-// anywhere in this app: accounts are pre-seeded, login is the only auth flow.
 export const LoginScreen = () => {
-  return (
-    <SafeAreaView className="flex-1 bg-black px-5 pt-10">
-      <Image source={require('../../../../assets/logo-mark.png')} style={{ width: 48, height: 48 }} resizeMode="contain" className="mb-6" />
-      <ThemedText variant="title">Log in</ThemedText>
-      <ThemedText variant="md" className="mt-2 text-zinc-400">
-        Use your school email/matric no. and password.
-      </ThemedText>
+  const {
+    mutate: login,
+    error: loginError,
+    isPending: isLoggingIn,
+  } = useLoginMutation();
 
-      <View className="mt-8 gap-4">
-        {/* TODO (Sprint 1): real inputs + react-hook-form + zod validation, wired to POST /api/auth/login */}
-        <View className="rounded-lg border border-zinc-700 px-4 py-4">
-          <ThemedText className="text-zinc-500">Email / Matric No.</ThemedText>
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      identifier: '',
+      password: '',
+    },
+  });
+
+  const onSubmit = (data: LoginValues) => login(data);
+
+  return (
+    <SafeAreaView edges={['bottom']} className="flex-1 bg-black">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+        <View className="flex-1 justify-center px-6">
+          {loginError && (
+            <ErrorMessage
+              message={loginError?.errors}
+              fallback="Login failed. Please check your credentials."
+            />
+          )}
+
+          <View className="gap-3">
+            <Controller
+              control={control}
+              name="identifier"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Matric no."
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                  autoCapitalize="none"
+                  error={errors.identifier?.message}
+                  size="lg"
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Password"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                  secureTextEntry
+                  error={errors.password?.message}
+                  size="lg"
+                />
+              )}
+            />
+
+            <Button
+              title={isLoggingIn ? 'Signing In...' : 'Log in'}
+              onPress={handleSubmit(onSubmit)}
+              loading={isLoggingIn}
+              className="mt-8"
+            />
+          </View>
         </View>
-        <View className="rounded-lg border border-zinc-700 px-4 py-4">
-          <ThemedText className="text-zinc-500">Password</ThemedText>
-        </View>
-        <Button title="Log in" className="mt-2" />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
