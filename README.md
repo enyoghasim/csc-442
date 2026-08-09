@@ -8,7 +8,7 @@ Accounts are pre-seeded (no self-registration). Auth is strictly session-based �
 
 ```
 apps/
-  backend/      Next.js — API routes only, no UI
+  backend/      NestJS — API only, no UI
   mobile/       Expo React Native app (student-facing)
   dashboard/    Next.js + shadcn/ui (lecturer-facing web app)
 packages/
@@ -28,6 +28,23 @@ pnpm dev:backend           # http://localhost:3001
 pnpm dev:dashboard         # http://localhost:3000
 pnpm dev:mobile            # Expo dev server
 ```
+
+Once Postgres is up, apply the schema and seed accounts:
+
+```bash
+pnpm --filter backend db:migrate
+pnpm db:seed
+```
+
+## Seeded test accounts
+
+`apps/backend/src/database/seed/seed.ts` seeds one lecturer and 188 students (from a class list
+spreadsheet, `apps/backend/src/database/seed/data/students.json`). Every seeded account shares the
+same default password:
+
+- **Password (all accounts):** `p@ssword`
+- **Lecturer login:** `lecturer@csc422.local`
+- **Student login:** any regNumber from `students.json`, e.g. `2022514022`
 
 ## Monorepo tooling
 

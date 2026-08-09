@@ -11,16 +11,27 @@
 
 ## Sprint 1 — Auth + Schema (session-based, seeded accounts, no JWT)
 
-- [ ] Define full Drizzle schema (users, classes, enrollments, classSessions, attendance_records)
-- [ ] Run first migration
-- [ ] Seed script: import class list (CSV/JSON) → insert lecturer/student users with hashed default passwords
-- [ ] Implement `lib/config/session.ts` (Redis-backed createSession/getSession/destroySession, opaque IDs, TTL)
-- [ ] Login endpoint — verify credentials, create Redis session, set httpOnly cookie (dashboard) + return session id (mobile)
-- [ ] Logout endpoint — destroy Redis session
-- [ ] Auth middleware for API routes — reads cookie (dashboard) or `Authorization: Session <id>` header (mobile), looks up Redis, attaches user/role to request
-- [ ] Role guard (student/lecturer) for protected routes
-- [ ] Dashboard: login page wired to API (credentialed fetch)
-- [ ] Mobile: login screen wired to API, session id stored via expo-secure-store, attached to future requests
+- [ ] Define full Drizzle schema (`users` has real columns now — role, name, email, regNumber,
+      passwordHash; `classes`/`enrollments`/`classSessions`/`attendance_records` still stubs)
+- [x] Run first migration
+- [x] Seed script: `apps/backend/src/database/seed/seed.ts` — reads `data/students.json`
+      (name+regNumber, extracted from the CSC 422 class list), inserts one lecturer + 188
+      students, bcrypt-hashed default password `p@ssword` for every account, idempotent
+- [x] Session lifecycle — real `express-session` + `connect-redis` middleware
+      (`apps/backend/src/config/session.ts`), not a custom createSession/getSession/destroySession
+      wrapper (deliberate architecture choice, documented in `apps/backend/AGENTS.md`)
+- [x] Login endpoint — verify credentials (bcrypt), create Redis session, set httpOnly cookie
+      (dashboard) + return session id (mobile)
+- [x] Logout endpoint — destroys the _actual_ session regardless of whether it authenticated via
+      cookie or `Authorization: Session <id>` header (see `common/utils/session.ts`)
+- [x] Auth guard for API routes — `SessionAuthGuard`, reads cookie (dashboard) or
+      `Authorization: Session <id>` header (mobile) via Redis, applied to `GET /api/auth/me`
+- [ ] Role guard (student/lecturer) for protected routes — guard checks _authenticated_, not yet
+      _authorized for this role_
+- [ ] Dashboard: login page wired to API (credentialed fetch) — still a static placeholder form
+- [x] Mobile: login screen wired to API (react-hook-form + zod, matches the reference app's form
+      pattern), session id stored via expo-secure-store, attached to future requests via
+      `api.ts`'s interceptor
 
 ## Sprint 2 — Classes & Sessions
 

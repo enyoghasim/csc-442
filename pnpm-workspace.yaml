@@ -2,6 +2,9 @@ packages:
   - 'apps/*'
   - 'packages/*'
 allowBuilds:
+  # Pure install-time analytics ping, no functional purpose (unlike the three below, which need
+  # their build step to actually work) — left disabled.
+  '@scarf/scarf': false
   bcrypt: true
   esbuild: true
   unrs-resolver: true
