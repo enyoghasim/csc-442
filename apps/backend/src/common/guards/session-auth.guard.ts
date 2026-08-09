@@ -1,10 +1,21 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { Request } from 'express';
 
-// TODO (Sprint 1): read request.session?.userId, throw UnauthorizedException if absent,
-// mirroring the session/auth contract in apps/backend/AGENTS.md. Not wired to any route yet.
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
-  canActivate(_context: ExecutionContext): boolean {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest<Request>();
+
+    if (!request.session?.userId) {
+      throw new UnauthorizedException('Not authenticated');
+    }
+
+    request.currentUserId = request.session.userId;
     return true;
   }
 }

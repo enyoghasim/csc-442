@@ -25,18 +25,34 @@ src/
     database.types.ts         DbExecutor type (db handle or tx handle)
     schema/                   ONE pgTable PER FILE (users, classes, enrollments,
                                class-sessions, attendance-records) + enums.schema.ts
-                               (centralized pgEnum defs) + index.ts barrel
-    seed/seed.ts               seed script, run via `pnpm db:seed`
+                               (centralized pgEnum defs) + index.ts barrel. `users` has real
+                               columns (role, name, email, regNumber, passwordHash) — the other
+                               four tables are still id/createdAt/updatedAt stubs.
+    seed/
+      seed.ts                  seed script, run via `pnpm db:seed` — reads data/students.json,
+                                inserts one lecturer + all students, bcrypt-hashes the shared
+                                default password once and reuses the hash, idempotent via
+                                onConflictDoNothing on email/regNumber
+      data/students.json        name+regNumber pairs, extracted from a class list spreadsheet
+                                (not committed to re-derive from the source .xlsx — this file
+                                IS the source of truth now)
   controllers/                thin HTTP layer, one file per domain, @Controller per route group
   services/<domain>/           business logic, one folder per domain
   repositories/<domain>/       ONLY layer that touches DatabaseService/Drizzle
   modules/<domain>/            Nest module wiring (controller + service + repositories)
   dtos/                        request/query DTOs (class-validator), one file per domain
   common/
-    guards/                    session-auth.guard.ts (stub — not wired to any route yet)
+    guards/                    session-auth.guard.ts — real, see "Authentication" below
     filters/                   http-exception.filter.ts — single global filter
-    utils/                     response-factory.ts — successResponse() helper
-  @types/express-session/       module augmentation for SessionData
+    utils/                     response-factory.ts (successResponse()), serialize-user.ts
+                               (toPublicUser() — allow-list, strips passwordHash),
+                               api-docs.util.ts (errorExample(), see "Swagger")
+    api-docs/                  <domain>.docs.ts — composed @Api*() decorators per route, kept
+                               out of the controllers themselves; examples.ts — shared example
+                               payloads (see "Swagger")
+  @types/
+    express-session/            module augmentation for SessionData (userId only — see below)
+    express/                    module augmentation for Request.currentUserId (see below)
 ```
 
 ## Layering rule
@@ -65,20 +81,33 @@ end to end.
 ## Authentication & sessions — hard rules
 
 - **Opaque, Redis-backed session IDs only. No JWT, ever.**
-- `config/session.ts` wires real `express-session` + `connect-redis` middleware (this is
-  infrastructure boilerplate, not the "no session logic yet" business logic promp.md's Sprint 0
-  scope refers to — the session _lifecycle_ (who gets logged in, role checks) is still Sprint 1).
-  The cookie carries only the session id; `SessionData` (`userId`, `role`) lives in Redis under
-  `sess:<id>` (TTL = `SESSION_TTL_SECONDS`), written directly via `req.session.userId = ...` in
-  the auth controller on login — no separate `createSession`/`getSession`/`destroySession`
-  wrapper functions (that's `express-session`'s job, not ours to reimplement).
+- `config/session.ts` wires real `express-session` + `connect-redis` middleware. `SessionData`
+  (`userId` only) lives in Redis under `sess:<id>` (TTL = `SESSION_TTL_SECONDS`), written directly
+  via `req.session.userId = ...` in `AuthController.login` — no separate
+  `createSession`/`getSession`/`destroySession` wrapper functions (that's `express-session`'s job,
+  not ours to reimplement). Deliberately **not** cached: `role` is not stored in the session —
+  looking it up fresh from the DB by `userId` at the point of an authorization check avoids acting
+  on a role that's gone stale since login (e.g. a promotion/demotion that happened mid-session).
 - `SESSION_SECRET` (in root `.env.example`) is **not** a JWT secret — it's `express-session`'s
   cookie-signing key (HMAC, prevents cookie tampering), an orthogonal concern. There is still no
   JWT anywhere.
-- Mobile has no cookie jar, so login also returns the session id in the response body; mobile
-  attaches it as `Authorization: Session <id>` on future requests (Sprint 1).
-- `common/guards/session-auth.guard.ts` is a stub (`canActivate` always returns `true`) — Sprint 1
-  wires it to check `request.session?.userId` and isn't applied to any controller yet.
+- **One client-agnostic cookie path, no manual session-id handling.** `express-session` populates
+  `request.session` automatically on every request, for both dashboard (browser cookie jar) and
+  mobile (axios instance created with `withCredentials: true` in
+  `apps/mobile/src/modules/shared/lib/api.ts`, so it stores/resends the httpOnly `connect.sid`
+  cookie exactly like a browser would). Neither client needs to see or manage the raw session id.
+- `common/guards/session-auth.guard.ts` throws `UnauthorizedException` if `request.session?.userId`
+  is unset; on success it sets `request.currentUserId` (a separate property from `request.session`,
+  kept that way so downstream code doesn't have to know it's session-backed). Applied via
+  `@UseGuards(SessionAuthGuard)` on `GET /api/auth/me` and `POST /api/auth/logout`; apply it to any
+  other route that needs a logged-in user.
+- Logout destroys the session directly — `request.session.destroy(...)` in `AuthController.logout`,
+  no wrapper needed now that there's only one path to a session.
+- Login accepts `{ identifier, password }` — `identifier` is a lecturer's email or a student's
+  regNumber, whichever matches (`UsersRepository.findByIdentifier`). Response is `{ user }` where
+  `user` is `toPublicUser()`'d (passwordHash stripped, allow-list not deny-list — new sensitive
+  columns don't leak by default). The session id itself is never in the response body — it only
+  ever exists in the `Set-Cookie` header, written straight to Redis by connect-redis.
 
 ## Response envelope
 
@@ -96,11 +125,27 @@ folder names across `controllers/services/repositories/modules` (e.g. `class-ses
 - Env validation uses **zod**, not Joi (this project's other zod usage — request DTOs — makes zod
   the single validation library across the app).
 - Redis client is **ioredis**, not the `redis` npm package.
-- No RabbitMQ/S3/mail/Swagger layers — out of scope for this project.
+- No RabbitMQ/S3/mail layers — out of scope for this project.
 - No `xAppModule`-style renamed root module — plain `AppModule`.
 
-## Out of scope this pass (Sprint 0)
+## Swagger
 
-No real schema columns beyond `id`/`createdAt`/`updatedAt`. No session lifecycle logic (login
-doesn't actually set `req.session.userId` yet). No auth guard wired to any route. No rate
-limiting. No QR token generation. All of that is Sprint 1+ per the root `TASKS.md`.
+Ported from the reference backend: `@nestjs/swagger`'s `SwaggerModule`/`DocumentBuilder` wired in
+`main.ts`, served at `/api/docs` (outside `main.ts`'s global `api` prefix handling, same as the
+reference). One security scheme — `addCookieAuth('connect.sid')` — covers both clients now that
+mobile authenticates the same way dashboard does (see "Authentication" above).
+Per-route docs live in `common/api-docs/<domain>.docs.ts` as composed decorators (`LoginDocs()`,
+`MeDocs()`, ...) applied with a single line on each controller method — same pattern as the
+reference's `common/api-docs/auth.docs.ts`, so a route's Swagger annotations never crowd out its
+actual logic. Example payloads for docs live in `common/api-docs/examples.ts`; error-response
+examples go through `common/utils/api-docs.util.ts`'s `errorExample()`, which mirrors this
+project's actual `HttpExceptionFilter` envelope (`{ success: false, error: { statusCode, message } }`)
+— not the reference's flatter shape.
+
+## Out of scope still
+
+Login/logout/me and the `users` table are real (see "Authentication" above). Everything else
+per the root `TASKS.md` is still ahead: `classes`/`enrollments`/`class_sessions`/
+`attendance_records` are still id/createdAt/updatedAt stubs with no real columns, no role guard
+distinguishing student vs lecturer routes yet (the guard checks _authenticated_, not _authorized
+for this role_), no rate limiting, no QR token generation.
