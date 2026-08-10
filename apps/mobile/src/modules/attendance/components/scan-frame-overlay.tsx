@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { ThemedText } from '../../shared/components/themed-text';
 
@@ -12,8 +12,12 @@ const SCRIM = 'rgba(0,0,0,0.55)';
 // The bounded viewfinder + corner brackets + animated scan line every real QR scanner uses —
 // dims everything outside the frame so it's obvious exactly what area the camera is reading,
 // rather than a bare full-screen camera preview with no visual guidance.
-export function ScanFrameOverlay() {
-  const { width, height } = useWindowDimensions();
+//
+// `width`/`height` must be the *measured* size of this overlay's own container (an onLayout
+// result), not useWindowDimensions() — this screen is pushed under a native header
+// (presentation: 'modal', headerShown: true), so the window's full height overcounts the actual
+// visible camera area by the header's height, which pushed the frame below true center.
+export function ScanFrameOverlay({ width, height }: { width: number; height: number }) {
   const verticalBarHeight = Math.max(0, (height - FRAME_SIZE) / 2);
 
   const scanLineY = useSharedValue(0);

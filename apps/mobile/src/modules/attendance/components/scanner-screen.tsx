@@ -1,7 +1,8 @@
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../shared/components/button';
 import { ErrorMessage } from '../../shared/components/error-message';
@@ -45,16 +46,28 @@ export const ScannerScreen = () => {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanError, setScanError] = useState<string | null>(null);
   const [checkedIn, setCheckedIn] = useState(false);
+  // The overlay needs the *real* rendered size of this container (see scan-frame-overlay.tsx's
+  // comment) — measured via onLayout rather than useWindowDimensions(), which overcounts by the
+  // native header's height on this pushed/modal screen.
+  const [layout, setLayout] = useState<{ width: number; height: number } | null>(null);
   // Guards against the camera firing onBarcodeScanned repeatedly for the same frame/code while a
   // mutation is already in flight — the throttler is a backstop, not something to lean on here.
   const scanLockedRef = useRef(false);
 
   const { mutate: checkIn, isPending } = useCheckInMutation();
 
+  const onContainerLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setLayout({ width, height });
+  }, []);
+
   const handleBarcodeScanned = useCallback(
     (result: BarcodeScanningResult) => {
       if (scanLockedRef.current) return;
       scanLockedRef.current = true;
+      // Fires the instant a QR shape is detected, before we even know if it's a valid check-in
+      // code — same "something happened" signal a real scanner gives on every read.
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setScanError(null);
 
       const payload = parseCheckInPayload(result.data);
@@ -66,10 +79,12 @@ export const ScannerScreen = () => {
 
       checkIn(payload, {
         onSuccess: () => {
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setCheckedIn(true);
           setTimeout(() => router.back(), 1200);
         },
         onError: (error) => {
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           setScanError(friendlyErrorMessage(error.errors));
           scanLockedRef.current = false;
         },
@@ -98,14 +113,14 @@ export const ScannerScreen = () => {
   }
 
   return (
-    <View className="flex-1 bg-black">
+    <View className="flex-1 bg-black" onLayout={onContainerLayout}>
       <CameraView
         style={{ flex: 1 }}
         facing="back"
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={checkedIn ? undefined : handleBarcodeScanned}
       />
-      {!checkedIn && <ScanFrameOverlay />}
+      {!checkedIn && layout && <ScanFrameOverlay width={layout.width} height={layout.height} />}
 
       <SafeAreaView edges={['bottom']} className="absolute bottom-0 left-0 right-0 p-4">
         {checkedIn && (
