@@ -35,10 +35,10 @@ function TimeSelect({
   const { field: minuteField } = useController({ control, name: minuteName });
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex shrink-0 items-center gap-2">
       <HugeiconsIcon icon={Clock01Icon} size={16} className="shrink-0 text-muted-foreground" />
       <Select value={hourField.value} onValueChange={hourField.onChange}>
-        <SelectTrigger id={hourId} className="w-full">
+        <SelectTrigger id={hourId} className="w-18">
           <SelectValue placeholder="HH" />
         </SelectTrigger>
         <SelectContent>
@@ -51,7 +51,7 @@ function TimeSelect({
       </Select>
       <span className="text-muted-foreground">:</span>
       <Select value={minuteField.value} onValueChange={minuteField.onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-18">
           <SelectValue placeholder="MM" />
         </SelectTrigger>
         <SelectContent>
@@ -113,7 +113,7 @@ export function ScheduleSessionDialog() {
           Schedule session
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Schedule session</DialogTitle>
         </DialogHeader>
@@ -145,37 +145,35 @@ export function ScheduleSessionDialog() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Date</Label>
-            <Controller
-              control={control}
-              name="date"
-              render={({ field }) => (
-                <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start font-normal">
-                      <HugeiconsIcon icon={Calendar03Icon} size={16} />
-                      {field.value ? field.value.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'Pick a date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={(date) => {
-                        field.onChange(date);
-                        setDatePopoverOpen(false);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-              )}
-            />
-            {errors.date && <span className="text-xs text-destructive">{errors.date.message}</span>}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
             <Label htmlFor="start-hour">Starts at</Label>
-            <TimeSelect control={control} hourId="start-hour" hourName="startHour" minuteName="startMinute" />
+            <div className="flex flex-wrap items-center gap-2">
+              <Controller
+                control={control}
+                name="date"
+                render={({ field }) => (
+                  <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="flex-1 min-w-32 justify-start font-normal">
+                        <HugeiconsIcon icon={Calendar03Icon} size={16} />
+                        {field.value ? field.value.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pick a date'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(date) => {
+                          field.onChange(date);
+                          setDatePopoverOpen(false);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
+              <TimeSelect control={control} hourId="start-hour" hourName="startHour" minuteName="startMinute" />
+            </div>
+            {errors.date && <span className="text-xs text-destructive">{errors.date.message}</span>}
             {errors.startHour && <span className="text-xs text-destructive">{errors.startHour.message}</span>}
           </div>
 

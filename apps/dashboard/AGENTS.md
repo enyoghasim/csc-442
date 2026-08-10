@@ -147,11 +147,16 @@ date/time pickers look inconsistent across platforms and don't pick up this app'
 session's start and end are collected as one shared `Calendar` date (in a `Popover`, the standard
 shadcn date-picker composition) plus separate Hour/Minute `Select` dropdowns per side
 (`TimeSelect` in the same file, backed by `useController` since it needs two field values/setters
-at once — cleaner than nesting two render-prop `Controller`s). `validations/sessions.ts`'s
-`combineDateTime(date, hour, minute)` composes the real `Date` both for the schema's cross-field
-`endsAt > startsAt` refine and for the dialog's submit handler, which builds the ISO strings
-`sessions.mutation.ts`'s `ScheduleSessionPayload` actually wants — the mutation layer only ever
-sees the wire shape, not the form's internal date+hour+minute split.
+at once — cleaner than nesting two render-prop `Controller`s). The date picker and the _start_
+`TimeSelect` share one row under a single "Starts at" label (`flex flex-wrap items-center gap-2`)
+— there's only one date field for the whole session, so pairing it with the end time instead would
+misleadingly suggest the session could span two different days. "Ends at" is its own row with just
+the time selects. `DialogContent` is widened to `sm:max-w-md` here (the shadcn default `sm:max-w-sm`
+is too narrow to fit the date button and both time selects on one line without wrapping).
+`validations/sessions.ts`'s `combineDateTime(date, hour, minute)` composes the real `Date` both for
+the schema's cross-field `endsAt > startsAt` refine and for the dialog's submit handler, which
+builds the ISO strings `sessions.mutation.ts`'s `ScheduleSessionPayload` actually wants — the
+mutation layer only ever sees the wire shape, not the form's internal date+hour+minute split.
 
 ## Export — CSV and Excel
 
