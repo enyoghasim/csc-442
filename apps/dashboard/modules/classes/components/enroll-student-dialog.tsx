@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Loading03Icon, UserAdd02Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -47,6 +49,7 @@ export function EnrollStudentDialog({ klass }: { klass: Class }) {
     >
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
+          <HugeiconsIcon icon={UserAdd02Icon} size={16} />
           Enroll student
         </Button>
       </DialogTrigger>
@@ -67,6 +70,7 @@ export function EnrollStudentDialog({ klass }: { klass: Class }) {
 
           <DialogFooter>
             <Button type="submit" disabled={isPending}>
+              {isPending && <HugeiconsIcon icon={Loading03Icon} size={16} className="animate-spin" />}
               {isPending ? 'Enrolling...' : 'Enroll'}
             </Button>
           </DialogFooter>

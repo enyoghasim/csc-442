@@ -1,9 +1,17 @@
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import type { ApiResponse } from '@attendance/shared';
 import { api } from '@/modules/shared/lib/api';
-import { ApiError, handleApiError, validateApiResponse } from '@/modules/shared/lib/util';
-import { buildMutationOptions, queryClient } from '@/modules/shared/services/query-client';
+import {
+  ApiError,
+  handleApiError,
+  validateApiResponse,
+} from '@/modules/shared/lib/util';
+import {
+  buildMutationOptions,
+  queryClient,
+} from '@/modules/shared/services/query-client';
 import { userKeys } from '@/modules/shared/services/query-keys';
 import { AUTH_ENDPOINTS } from './auth.endpoints';
 import type { AuthResponse } from '../types';
@@ -18,7 +26,10 @@ export const useLoginMutation = () => {
   return useMutation<AuthResponse, ApiError, LoginValues>({
     mutationFn: async (values) => {
       try {
-        const { data } = await api.post<ApiResponse<AuthResponse>>(AUTH_ENDPOINTS.login, values);
+        const { data } = await api.post<ApiResponse<AuthResponse>>(
+          AUTH_ENDPOINTS.login,
+          values,
+        );
         const authData = validateApiResponse<AuthResponse>(data);
         queryClient.setQueryData(userKeys.detail('me'), authData.user);
         router.replace('/classes');
@@ -31,8 +42,6 @@ export const useLoginMutation = () => {
 };
 
 export const useLogoutMutation = () => {
-  const router = useRouter();
-
   return useMutation(
     buildMutationOptions(userKeys.all, {
       mutationFn: async () => {
@@ -42,7 +51,8 @@ export const useLogoutMutation = () => {
           // Best-effort — the session cookie may already be gone/expired server-side.
         }
         queryClient.setQueryData(userKeys.detail('me'), null);
-        router.replace('/login');
+        toast.success('Logged out');
+        window.location.replace('/login');
       },
     }),
   );

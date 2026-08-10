@@ -5,6 +5,12 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useQrTokenQuery } from '../services/sessions.query';
 import type { ClassSession } from '../types';
 
+// Matches config/redis-keys.ts's QR_TOKEN_TTL_SECONDS relationship — the frontend rotates every
+// 15s, well inside the backend's 39s buffer, authenticator-app style.
+const REFRESH_SECONDS = 15;
+const RING_RADIUS = 11;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
 function isSessionActive(session: ClassSession): boolean {
   const now = Date.now();
   return now >= new Date(session.startsAt).getTime() && now <= new Date(session.endsAt).getTime();
@@ -30,13 +36,13 @@ export function QrDisplay({ session }: { session: ClassSession }) {
     dataUpdatedAt,
   } = useQrTokenQuery(session.id, { enabled: active });
 
-  const [secondsLeft, setSecondsLeft] = useState(60);
+  const [secondsLeft, setSecondsLeft] = useState(REFRESH_SECONDS);
 
   useEffect(() => {
     if (!dataUpdatedAt) return;
     const tick = () => {
       const elapsed = Math.floor((Date.now() - dataUpdatedAt) / 1000);
-      setSecondsLeft(Math.max(0, 60 - elapsed));
+      setSecondsLeft(Math.max(0, REFRESH_SECONDS - elapsed));
     };
     tick();
     const interval = setInterval(tick, 1000);
@@ -68,13 +74,33 @@ export function QrDisplay({ session }: { session: ClassSession }) {
   }
 
   const payload = JSON.stringify({ classSessionId: qrToken.classSessionId, token: qrToken.token });
+  const ringOffset = RING_CIRCUMFERENCE * (1 - secondsLeft / REFRESH_SECONDS);
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="rounded-lg bg-white p-4">
+      <div className="relative rounded-lg bg-white p-4">
         <QRCodeSVG value={payload} size={224} />
       </div>
-      <p className="text-sm text-muted-foreground">Refreshes in {secondsLeft}s</p>
+
+      {/* Authenticator-app-style shrinking ring, ticking down each 15s rotation. */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <svg width="24" height="24" viewBox="0 0 24 24" className="-rotate-90">
+          <circle cx="12" cy="12" r={RING_RADIUS} fill="none" stroke="currentColor" strokeOpacity={0.2} strokeWidth="2" />
+          <circle
+            cx="12"
+            cy="12"
+            r={RING_RADIUS}
+            fill="none"
+            stroke="var(--primary)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeDasharray={RING_CIRCUMFERENCE}
+            strokeDashoffset={ringOffset}
+            className="transition-[stroke-dashoffset] duration-1000 ease-linear"
+          />
+        </svg>
+        <span>Refreshes in {secondsLeft}s</span>
+      </div>
     </div>
   );
 }

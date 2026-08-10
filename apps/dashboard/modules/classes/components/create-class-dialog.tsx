@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Add01Icon, Loading03Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -45,7 +47,10 @@ export function CreateClassDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <Button>Create class</Button>
+        <Button>
+          <HugeiconsIcon icon={Add01Icon} size={16} />
+          Create class
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -69,6 +74,7 @@ export function CreateClassDialog() {
 
           <DialogFooter>
             <Button type="submit" disabled={isPending}>
+              {isPending && <HugeiconsIcon icon={Loading03Icon} size={16} className="animate-spin" />}
               {isPending ? 'Creating...' : 'Create'}
             </Button>
           </DialogFooter>

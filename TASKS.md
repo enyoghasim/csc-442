@@ -59,7 +59,9 @@
 - [x] Backend: generate rotating QR token per active class session, store in Redis with TTL —
       `GET /api/sessions/:id/qr-token` (lecturer only, must own class, session must be within
       its `[startsAt, endsAt]` window), overwrites `qr:<classSessionId>` with a fresh random
-      token + `QR_TOKEN_TTL_SECONDS` TTL every call — poll it to rotate the displayed code
+      token + `QR_TOKEN_TTL_SECONDS` (39s) TTL every call — poll it to rotate the displayed
+      code; authenticator-app-style timing, the TTL is a buffer past the dashboard's 15s
+      rotation interval, not a match to it
 - [x] Backend: endpoint to fetch current QR token for a class session — same endpoint as above
       (fetch and rotate are the same action; there's no separate "current without rotating")
 - [x] Backend: check-in endpoint — `POST /api/attendance/check-in` (student only), validates
@@ -69,8 +71,9 @@
       (`ThrottlerModule.forRoot` in `modules/attendance/attendance.module.ts`)
 - [x] Dashboard: live QR display on session page, auto-refreshing (`app/sessions/[id]/page.tsx`,
       `modules/sessions/components/qr-display.tsx` — polls `GET /api/sessions/:id/qr-token` every
-      60s via `useQrTokenQuery`'s `refetchInterval`, comfortably under the ~90s Redis TTL; roster
-      below it also auto-refreshes on a 15s interval)
+      15s via `useQrTokenQuery`'s `refetchInterval`, well inside the 39s Redis TTL buffer, with
+      an authenticator-app-style shrinking countdown ring; roster below it also auto-refreshes on
+      a 15s interval)
 - [x] Mobile: wire expo-camera QR scanner to check-in endpoint
 
 ## Sprint 4 — History & Reports

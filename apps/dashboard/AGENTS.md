@@ -18,7 +18,7 @@ app/                          Route files ONLY — thin, import from modules/. N
   classes/page.tsx              real: list + create-class dialog + per-row enroll-student dialog
   sessions/page.tsx             real: list + schedule-session dialog, links to session detail
   sessions/[id]/page.tsx        real: live QR display (polling, rotates ~60s) + roster (polling)
-  reports/page.tsx              real: class picker + attendance summary table + CSV export link
+  reports/page.tsx              real: class picker + attendance summary table + export dropdown
 modules/                      All business/domain logic — mirrors apps/mobile/src/modules/.
   auth/                        services/{auth.endpoints,auth.mutation,auth.query}.ts,
                                 validations/auth.ts (identifier is always an email here — lecturer
@@ -30,12 +30,16 @@ modules/                      All business/domain logic — mirrors apps/mobile/
                                 ClassDTO)
   sessions/                    (class sessions) services/{sessions.endpoints,sessions.query,
                                 sessions.mutation}.ts (sessions.query.ts also has useQrTokenQuery,
-                                the rotating-token poll), validations/sessions.ts,
+                                the rotating-token poll; sessions.mutation.ts's
+                                ScheduleSessionPayload is the wire shape — ISO strings — the
+                                *form's* date+hour+minute dropdowns get composed into before
+                                calling it), validations/sessions.ts (scheduleSessionSchema +
+                                combineDateTime(), see "Date/time inputs" below),
                                 components/{schedule-session-dialog,sessions-table,qr-display,
                                 session-detail}.tsx, types.ts (re-exports ClassSessionDTO)
   attendance/                  services/{attendance.endpoints,attendance.query}.ts (no
                                 mutation — lecturer side is read-only), components/
-                                {session-roster-table,class-summary-table,export-summary-link,
+                                {session-roster-table,class-summary-table,export-summary-dropdown,
                                 reports-content}.tsx, types.ts — SessionRosterEntry /
                                 ClassAttendanceSummaryEntry defined LOCALLY (not in
                                 @attendance/shared — these are report/read-models, not table DTOs,
@@ -51,14 +55,23 @@ modules/                      All business/domain logic — mirrors apps/mobile/
                                 error-message}.tsx
 components/
   ui/                         shadcn-generated primitives (button, card, table, input, dialog,
-                               select, label, badge, separator, sonner, ...) — regenerate via
+                               alert-dialog, sheet, select, dropdown-menu, popover, calendar,
+                               label, badge, separator, skeleton, sonner, ...) — regenerate via
                                `pnpm dlx shadcn@latest add <component>`, don't hand-edit generated
-                               internals beyond what shadcn itself supports. No `form.tsx` — this
+                               internals beyond what shadcn itself supports (except swapping their
+                               default lucide-react icons for HugeIcons — see "Icons" below, a
+                               deliberate deviation from stock shadcn output). No `form.tsx` — this
                                registry (radix-nova) doesn't ship one; forms use react-hook-form's
-                               `Controller` directly instead, matching apps/mobile's pattern.
-  layout/sidebar.tsx           shared nav — 'use client' (needs useCurrentUserQuery for the name
-                                display + useLogoutMutation for the logout button), highlights the
-                                active route, renders <Logo />
+                               `Controller`/`useController` directly instead, matching
+                               apps/mobile's pattern.
+  layout/sidebar-nav.tsx        the actual nav content (logo/title, links, user info, logout with
+                                confirmation) — shared between the two chrome variants below so
+                                they can't drift apart. Takes an optional `onNavigate` to close the
+                                mobile Sheet on link tap.
+  layout/sidebar.tsx            desktop-only fixed sidebar (`hidden md:flex`), just wraps
+                                SidebarNav in the `<nav>` shell.
+  layout/mobile-nav.tsx         `md:hidden` top app bar with a hamburger button opening a Sheet
+                                containing SidebarNav — see "Responsive layout" below.
   logo.tsx                     inline-SVG "A" mark, flat/no gradient — mirrors apps/mobile's
                                 assets/logo-mark.png and repo-root brand/monochrome.svg; keep
                                 all three in sync
@@ -77,21 +90,79 @@ both `'use client'`), wired into `app/layout.tsx` inside `QueryProvider`: `AuthG
 apps/mobile's hook of the same name) and redirects to `/login` for every route except `/login`
 when there's no user, or away from `/login` to `/classes` when there already is one. `AppShell`
 also swaps chrome based on route: `/login` gets a centered card with no sidebar, everything else
-gets `Sidebar` + content. Both return `null` while loading or mid-redirect so there's no flash of
-the wrong screen — same reasoning as apps/mobile's `(auth)/_layout.tsx` / `(app)/_layout.tsx`,
-just collapsed into one gate since dashboard has no route groups.
+gets `MobileNav` + `Sidebar` + content (see "Responsive layout" below). Both return `null` while
+loading or mid-redirect so there's no flash of the wrong screen — same reasoning as apps/mobile's
+`(auth)/_layout.tsx` / `(app)/_layout.tsx`, just collapsed into one gate since dashboard has no
+route groups.
+
+## Responsive layout
+
+Below `md`: `AppShell` stacks `MobileNav` (a top bar with a hamburger button opening a `Sheet`
+with the full nav) above full-width content; `Sidebar` renders nothing (`hidden md:flex`). At
+`md`+: `MobileNav` renders nothing (`md:hidden`), `Sidebar` shows as a fixed-width row item next
+to content. Both variants render the exact same `SidebarNav` content — don't add nav
+links/behavior to one without the other. Tables don't need any special mobile handling beyond
+what they already have: shadcn's `Table` wraps in `overflow-x-auto` by default.
+
+## Logout confirmation
+
+`SidebarNav`'s logout button is an `AlertDialog` trigger, not a direct `onClick={() => logout()}`
+— "Log out?" / "You'll need to sign in again..." with a `variant="destructive"` confirm action.
+`useLogoutMutation` (`modules/auth/services/auth.mutation.ts`) fires a `sonner` success toast
+before redirecting — the `Toaster` lives in the root layout so it persists across the client-side
+navigation to `/login`, it isn't unmounted mid-toast.
+
+## Icons — HugeIcons, not lucide-react
+
+`@hugeicons/react`'s `HugeiconsIcon` + `@hugeicons/core-free-icons` (e.g. `<HugeiconsIcon
+icon={Logout03Icon} size={16} />`) — the same icon set `apps/mobile` uses via
+`@hugeicons/react-native`, for one consistent icon language across both user-facing apps. Every
+shadcn-generated primitive that ships its own lucide-react icons (`dialog.tsx`, `sheet.tsx`,
+`select.tsx`, `dropdown-menu.tsx`, `calendar.tsx`, `sonner.tsx`) has had them swapped for HugeIcons
+equivalents — when regenerating one of these via the shadcn CLI, re-apply the swap rather than
+leaving the regenerated lucide imports in place. `lucide-react` stays a dependency only because
+`shadcn`'s own tooling expects it to be installed; don't import from it in app code.
+
+## Date/time inputs — dropdowns, not native `datetime-local`
+
+`schedule-session-dialog.tsx` doesn't use `<input type="datetime-local">` — browser-native
+date/time pickers look inconsistent across platforms and don't pick up this app's dark theme. A
+session's start and end are collected as one shared `Calendar` date (in a `Popover`, the standard
+shadcn date-picker composition) plus separate Hour/Minute `Select` dropdowns per side
+(`TimeSelect` in the same file, backed by `useController` since it needs two field values/setters
+at once — cleaner than nesting two render-prop `Controller`s). `validations/sessions.ts`'s
+`combineDateTime(date, hour, minute)` composes the real `Date` both for the schema's cross-field
+`endsAt > startsAt` refine and for the dialog's submit handler, which builds the ISO strings
+`sessions.mutation.ts`'s `ScheduleSessionPayload` actually wants — the mutation layer only ever
+sees the wire shape, not the form's internal date+hour+minute split.
+
+## Export — CSV and Excel
+
+`export-summary-dropdown.tsx` (a `DropdownMenu` off one "Export" button) offers both. CSV reuses
+the existing backend endpoint unchanged (`GET /api/attendance/classes/:id/summary/export`, a
+top-level `<a download>` — see "Session / CORS" below for why that works without axios). Excel has
+no backend endpoint — there's no need for one: it's generated client-side with the `xlsx`
+(SheetJS) package from the exact same data `useClassSummaryQuery` already fetched for the table on
+screen (`XLSX.utils.json_to_sheet` → `XLSX.writeFile`, which handles the browser download itself).
+If the export data shape ever changes, update both the CSV column list
+(`apps/backend/src/services/attendance/attendance.service.ts`'s `classSummaryCsv`) and this
+component's `rows` mapping — they're independent code paths that happen to produce matching
+columns, not generated from one shared definition.
 
 ## QR payload contract
 
 `modules/sessions/components/qr-display.tsx` renders `qrcode.react`'s `QRCodeSVG` with
 `value={JSON.stringify({ classSessionId, token })}` from the polled `GET
 /api/sessions/:id/qr-token` response — this exact shape (key order: `classSessionId` then
-`token`, no wrapper) is what apps/mobile's scanner parses. Polls every 60s via
-`useQrTokenQuery`'s `refetchInterval` (the token's Redis TTL is ~90s, so 60s stays comfortably
-ahead of expiry) and only while the session's `[startsAt, endsAt]` window is open client-side
-(checked every second locally, since the window can open/close while the page sits idle) — the
-endpoint 400s outside that window, so polling pauses via `enabled: active` rather than surfacing
-the 400 as an error state.
+`token`, no wrapper) is what apps/mobile's scanner parses. Polls every 15s via
+`useQrTokenQuery`'s `refetchInterval` — authenticator-app-style timing: the backend's Redis TTL
+(`QR_TOKEN_TTL_SECONDS`) is 39s, a buffer past this interval rather than a match to it, so a code
+scanned right as it's about to rotate still has slack before the backend would reject it as
+expired. A shrinking ring (SVG `stroke-dashoffset`, CSS-transitioned) next to the "Refreshes in
+Ns" text visualizes the countdown. Polling only runs while the session's `[startsAt, endsAt]`
+window is open client-side (checked every second locally, since the window can open/close while
+the page sits idle) — the endpoint 400s outside that window, so polling pauses via
+`enabled: active` rather than surfacing the 400 as an error state.
 
 ## Styling — dark-by-default, Google Sans, matches apps/mobile
 
@@ -148,12 +219,12 @@ in favor of relative imports; that's a mobile-specific convention, not a monorep
 ## Known gaps / not yet done
 
 - No integration/e2e test suite for this app (root `TASKS.md`'s Sprint 5 manual-QA-pass bullet is
-  the closest thing so far — exercised via curl against the live backend + Next's dev/build
-  output, not a headless-browser click-through, since no browser automation tool was available in
-  the environment this was built in).
-- `app/page.tsx` (`/`) is still the Sprint-0 static landing card (auth-gated like every other
-  route, just no real content of its own) — not one of the five brief'd deliverable pages, so left
-  alone.
+  the closest thing so far). Manual verification since has included real headless-browser
+  click-throughs (Playwright via a one-off script, not a committed test suite — no `chromium-cli`/
+  Playwright is wired into this repo's own tooling) at both desktop and mobile viewport widths,
+  not just curl + dev/build output.
+- `app/page.tsx` (`/`) is a welcome card + quick-nav cards to Classes/Sessions/Reports — not one
+  of the five original brief'd deliverable pages, so kept intentionally light.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

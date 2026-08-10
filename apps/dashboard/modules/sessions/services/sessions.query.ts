@@ -15,10 +15,12 @@ export const useSessionsQuery = () => {
   });
 };
 
-// Polls the rotating QR token so the displayed code stays live. Every call to the endpoint
-// rotates the token server-side (fresh value overwrites the old one in Redis, ~90s TTL) — a
-// 60s refetch interval is comfortably under that. `enabled` lets the caller pause polling once
-// the session's `[startsAt, endsAt]` window has closed (the endpoint 400s otherwise).
+// Polls the rotating QR token so the displayed code stays live — authenticator-app-style timing:
+// rotates every 15s on the frontend, well inside the backend's 39s Redis TTL (see
+// config/redis-keys.ts's QR_TOKEN_TTL_SECONDS), which is deliberately a buffer past this interval
+// rather than a match to it — a code scanned right as it's about to rotate still has a few
+// seconds of slack before the backend would reject it as expired. `enabled` lets the caller pause
+// polling once the session's `[startsAt, endsAt]` window has closed (the endpoint 400s otherwise).
 export const useQrTokenQuery = (sessionId: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: [...sessionKeys.detail(sessionId), 'qr-token'],
@@ -27,7 +29,7 @@ export const useQrTokenQuery = (sessionId: string, options?: { enabled?: boolean
       return data.data ?? null;
     },
     enabled: options?.enabled ?? true,
-    refetchInterval: 60_000,
+    refetchInterval: 15_000,
     retry: false,
   });
 };

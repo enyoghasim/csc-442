@@ -5,8 +5,6 @@ import { LoginForm } from '@/modules/auth/components/login-form';
 export default function LoginPage() {
   return (
     <Card className="mx-auto w-full max-w-md py-8">
-      {/* CardHeader is a CSS grid, not flex — `items-center` (align-items) only affects the
-          vertical/cross axis there, so horizontal centering needs `justify-items-center`. */}
       <CardHeader className="justify-items-center">
         <Logo size={48} className="mb-2" />
         <CardTitle className="text-xl">Lecturer Login</CardTitle>

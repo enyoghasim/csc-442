@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useClassesQuery } from '@/modules/classes/services/classes.query';
 import { ClassSummaryTable } from './class-summary-table';
-import { ExportSummaryLink } from './export-summary-link';
+import { ExportSummaryDropdown } from './export-summary-dropdown';
 
 export function ReportsContent() {
   const { data: classes } = useClassesQuery();
@@ -12,9 +12,9 @@ export function ReportsContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Select value={classId} onValueChange={setClassId}>
-          <SelectTrigger className="w-64">
+          <SelectTrigger className="w-full sm:w-64">
             <SelectValue placeholder={classes?.length ? 'Select a class' : 'No classes yet'} />
           </SelectTrigger>
           <SelectContent>
@@ -26,7 +26,7 @@ export function ReportsContent() {
           </SelectContent>
         </Select>
 
-        <ExportSummaryLink classId={classId} />
+        <ExportSummaryDropdown classId={classId} />
       </div>
 
       <ClassSummaryTable classId={classId} />
