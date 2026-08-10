@@ -36,9 +36,7 @@ export class RolesGuard implements CanActivate {
     const user = await this.usersRepository.findById(request.currentUserId);
     if (!user) throw new UnauthorizedException('Session user no longer exists');
 
-    // users.role is Drizzle's pgEnum literal union, kept in sync with but structurally distinct
-    // from @attendance/shared's UserRole — same string values, mirrored by convention not by type.
-    if (!requiredRoles.includes(user.role as UserRole)) {
+    if (!requiredRoles.includes(user.role)) {
       throw new ForbiddenException('Insufficient role for this route');
     }
 
