@@ -197,11 +197,26 @@ examples go through `common/utils/api-docs.util.ts`'s `errorExample()`, which mi
 project's actual `HttpExceptionFilter` envelope (`{ success: false, error: { statusCode, message } }`)
 — not the reference's flatter shape.
 
+## Testing
+
+Two layers, both real: `pnpm test` (unit — `src/**/*.spec.ts`, repositories/Redis mocked, no DB
+needed) and `pnpm test:e2e` (`test/*.e2e-spec.ts` — real Postgres + Redis, full `main.ts` bootstrap
+via `test/utils/create-test-app.ts`, not a stripped-down test double: same session middleware,
+`ValidationPipe`, `HttpExceptionFilter`). E2e specs log in as the seeded lecturer/student accounts
+(`test/utils/fixtures.ts`), create their own uniquely-coded test data, and clean it up in
+`afterAll` respecting FK order (`attendance_records` → `class_sessions` → `enrollments` →
+`classes`). `test/jest-e2e.json` pins `maxWorkers: 1` — the 4 spec files share the same seeded
+fixtures and real DB/Redis, and running them as concurrent workers produced a real intermittent
+flake; `forceExit: true` is there because `config/redis.ts`'s `redis` export is a bare
+module-level singleton, not part of Nest's DI-managed lifecycle, so nothing closes it when an
+individual test app's `app.close()` runs.
+
 ## Out of scope still
 
 Auth, the full schema, and the classes/class-sessions/attendance domains are all real now (see
-"Authentication" and "Domains" above). Per the root `TASKS.md`, what's left here is Sprint 5:
-integration tests (login/session/attendance flows against a real DB, not the mocked-repository
-unit tests that already exist per-service) and a manual QA pass covering expired-session edge
-cases end to end with the dashboard/mobile clients once those exist. Everything else outstanding
-in `TASKS.md` is dashboard/mobile UI work, out of this app's scope.
+"Authentication" and "Domains" above), with both unit and integration test coverage (see
+"Testing"). What's left per the root `TASKS.md` is a manual QA pass covering expired-session edge
+cases through the actual dashboard/mobile UIs (needs a browser/device, not available in every
+environment this gets worked on), and non-engineering Sprint 5 items (technical report, demo
+prep). Everything else outstanding in `TASKS.md` is dashboard/mobile UI work, out of this app's
+scope.

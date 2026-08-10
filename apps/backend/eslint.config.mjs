@@ -41,4 +41,15 @@ export default tseslint.config(
       '@typescript-eslint/unbound-method': 'off',
     },
   },
+  {
+    // supertest's Response#body is typed `any` — there's no generated type for an arbitrary
+    // JSON API's response shape, so every `.body.data.foo` assertion trips the unsafe-* family.
+    // Scoped to e2e specs specifically, not the whole test/ dir.
+    files: ['test/**/*.e2e-spec.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+    },
+  },
 );

@@ -94,10 +94,18 @@
 ## Sprint 5 — Testing & Report
 
 - [x] Unit tests: backend services — `AuthService`, `ClassesService`, `ClassSessionsService`,
-      `AttendanceService` (40 tests, Jest, repositories/Redis mocked; `jest.config`'s
+      `AttendanceService` (41 tests, Jest, repositories/Redis mocked; `jest.config`'s
       `transformIgnorePatterns` needed no change in the end — see the `packages/shared`
       `package.json` fix below, which was the actual fix)
-- [ ] Integration tests: login, session, attendance endpoints
+- [x] Integration tests: login, session, attendance endpoints — `test/*.e2e-spec.ts`, real
+      Postgres + Redis (not mocked), full `main.ts` bootstrap (session middleware, ValidationPipe,
+      exception filter) via `test/utils/create-test-app.ts`; 11 tests covering login/me/logout +
+      session invalidation, class create/enrol/role-guard/409s, and the full schedule → QR token
+      → check-in → duplicate-409 → roster/summary/history/CSV flow. Caught two real bugs in the
+      process: every `POST` route was silently returning 201 instead of the documented 200 (now
+      `@HttpCode(HttpStatus.OK)` on all of them), and running the 4 spec files as concurrent
+      workers against shared seeded fixtures caused an intermittent flake (`jest-e2e.json` now
+      pins `maxWorkers: 1`, `forceExit: true` for the shared-Redis-singleton teardown)
 - [x] Manual QA pass (backend): exercised expired/inactive QR window, wrong token, duplicate
       check-in, unenrolled student, wrong-role rejection, and rate-limit-exceeded against the
       running dev server + Postgres/Redis — see commit history for the full pass
