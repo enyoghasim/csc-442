@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -45,6 +47,7 @@ export class ClassesController {
   }
 
   @Post()
+  @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)
   @Roles(UserRole.Lecturer)
   @CreateClassDocs()
@@ -74,6 +77,7 @@ export class ClassesController {
   }
 
   @Post(':id/enrollments')
+  @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)
   @Roles(UserRole.Lecturer)
   @EnrollStudentDocs()

@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Post,
   Req,
   Session,
@@ -23,6 +25,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   @LoginDocs()
   async login(@Body() body: LoginRequest, @Session() session: SessionData) {
     const user = await this.authService.login(body.identifier, body.password);
@@ -34,6 +37,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @HttpCode(HttpStatus.OK)
   @UseGuards(SessionAuthGuard)
   @LogoutDocs()
   async logout(@Req() request: Request) {

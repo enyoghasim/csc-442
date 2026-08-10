@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Post,
@@ -35,6 +37,7 @@ export class AttendanceController {
   // ThrottlerGuard here (module-scoped config in AttendanceModule) limits check-in attempts per
   // IP — scanning/re-scanning a QR code shouldn't need more than a handful of requests a minute.
   @Post('check-in')
+  @HttpCode(HttpStatus.OK)
   @UseGuards(ThrottlerGuard, RolesGuard)
   @Roles(UserRole.Student)
   @CheckInDocs()
