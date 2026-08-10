@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMyAttendanceQuery } from '../../attendance/services/attendance.query';
 import { useClassesQuery } from '../../classes/services/classes.query';
 import { useSessionsQuery } from '../../sessions/services/sessions.query';
 import { Button } from './button';
@@ -16,12 +17,25 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
+// Matches the attendance history's UTC day-bucketing (attendance.service.ts's historyForStudent,
+// attendance-calendar-screen.tsx's currentUtcMonth) — deliberately separate from isToday() above,
+// which filters "today's classes" by local time since that's what should visually match the
+// device's clock; only the marked/not-marked lookup needs to agree with the backend's UTC bucket.
+function todayUtc() {
+  const now = new Date();
+  return { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1, dateString: now.toISOString().slice(0, 10) };
+}
+
 export const HomeScreen = () => {
   const router = useRouter();
   const { data: classes } = useClassesQuery();
   const { data: sessions, isLoading: isLoadingSessions } = useSessionsQuery();
+  const { year, month, dateString } = todayUtc();
+  const { data: days } = useMyAttendanceQuery(month, year);
 
   const todaysSessions = (sessions ?? []).filter((session) => isToday(session.startsAt)).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const todaysRecords = days?.find((d) => d.date === dateString)?.records ?? [];
+  const isMarked = (sessionId: string) => todaysRecords.some((record) => record.classSessionId === sessionId && record.checkedInAt);
 
   const classNameFor = (classId: string) => classes?.find((c) => c.id === classId)?.name ?? 'Unknown class';
 
@@ -40,9 +54,18 @@ export const HomeScreen = () => {
           <ThemedText className="mt-2 text-zinc-500">No classes scheduled today.</ThemedText>
         ) : (
           todaysSessions.map((session) => (
-            <View key={session.id} className="mt-2 flex-row justify-between">
+            <View key={session.id} className="mt-2 flex-row items-center justify-between">
               <ThemedText>{classNameFor(session.classId)}</ThemedText>
-              <ThemedText className="text-zinc-500">{formatTime(session.startsAt)}</ThemedText>
+              <View className="flex-row items-center gap-2">
+                {isMarked(session.id) && (
+                  <View className="rounded-full bg-green-900/30 px-2 py-0.5">
+                    <ThemedText variant="sm" className="text-green-400">
+                      Marked
+                    </ThemedText>
+                  </View>
+                )}
+                <ThemedText className="text-zinc-500">{formatTime(session.startsAt)}</ThemedText>
+              </View>
             </View>
           ))
         )}

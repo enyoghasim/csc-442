@@ -192,6 +192,35 @@ viewfinder (dimmed scrim outside a `260`px square via three flexbox bars, accent
 brackets, a `reanimated` scan line bouncing top-to-bottom) over the raw `CameraView` — a plain
 full-screen camera preview with no framing reads as unfinished, not "scan here."
 
+**Scanning is one-shot, not continuous.** A `scanned` boolean (not just `checkedIn`) gates
+`CameraView`'s `onBarcodeScanned` prop — it's set on _any_ scan outcome (success, a rejected
+check-in, or an unparseable code), not just success. Earlier, only `checkedIn` disabled scanning;
+an error or invalid code reset `scanLockedRef` back to `false` immediately, so the same code still
+sitting in frame kept re-triggering `handleBarcodeScanned` on the very next camera frame — a loop
+of repeated error toasts, error vibrations, and mutation calls, not a one-shot scan. Now an
+error/invalid scan freezes the camera (and hides `ScanFrameOverlay`, since it's no longer actively
+scanning) until the student taps the "Restart scan" button that appears in that state, which resets
+`scanLockedRef`, `scanError`, and `scanned` together. A successful check-in still auto-navigates
+back after 1.2s with no restart needed. On success, `modules/attendance/lib/haptics.ts`'s
+`longSuccessVibration()` replaces the old single `Haptics.notificationAsync(Success)` pulse — too
+subtle to register as "the scan worked." Android gets a real continuous 3s buzz via
+`Vibration.vibrate(3000)`; iOS has no public API for a custom-duration single vibration
+(`Vibration.vibrate(ms)` silently ignores the duration there), so it gets a tight repeating pattern
+of short system buzzes instead, approximating ~3s of sustained vibration. The QR-detected impact
+haptic and the error notification haptic are unchanged.
+
+`modules/shared/components/home-screen.tsx`'s "today's classes" list marks any session the student
+has already checked into with a green "Marked" pill next to the time — sourced from
+`useMyAttendanceQuery(month, year)` (the same query the calendar screen uses, UTC month/year via a
+local `todayUtc()` helper) rather than a bespoke "today" endpoint, so it stays cache-consistent
+with the calendar. Deliberately two different "today" calculations coexist in this file: which
+sessions to _list_ still uses local-time `isToday()` (matches the device's clock, the more
+intuitive read for "is this happening today"), while which day-bucket to check for a mark uses the
+UTC date string — matching the backend's UTC day-bucketing (`attendance.service.ts`'s
+`historyForStudent`) is what actually matters for that lookup to agree with the calendar/day-detail
+screens. `useCheckInMutation` already invalidates `attendanceKeys.all` on success, so this list
+picks up a fresh "Marked" pill immediately after a scan with no extra wiring.
+
 `modules/attendance/components/attendance-calendar-screen.tsx` wires
 `useMyAttendanceQuery(month, year)` (`GET /api/attendance/me?month=&year=` — required, validated
 query params; response is dense, one `{date, records}` entry per day of the month) into

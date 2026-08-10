@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../shared/components/button';
 import { ErrorMessage } from '../../shared/components/error-message';
 import { ThemedText } from '../../shared/components/themed-text';
+import { longSuccessVibration } from '../lib/haptics';
 import { useCheckInMutation, type CheckInValues } from '../services/attendance.mutation';
 import { ScanFrameOverlay } from './scan-frame-overlay';
 
@@ -46,12 +47,19 @@ export const ScannerScreen = () => {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanError, setScanError] = useState<string | null>(null);
   const [checkedIn, setCheckedIn] = useState(false);
+  // Set the instant any scan resolves — success, a rejected check-in, or an unparseable code — so
+  // the camera stops feeding onBarcodeScanned entirely. Previously only `checkedIn` (the success
+  // case) disabled scanning; on an error or an invalid code, scanLockedRef reset to false right
+  // away and the same code still sitting in frame kept re-triggering handleBarcodeScanned on the
+  // next camera frame — a loop of repeated error toasts/vibrations/mutation calls, not a one-shot
+  // scan. Now an error/invalid scan freezes the camera until the student taps "Restart scan".
+  const [scanned, setScanned] = useState(false);
   // The overlay needs the *real* rendered size of this container (see scan-frame-overlay.tsx's
   // comment) — measured via onLayout rather than useWindowDimensions(), which overcounts by the
   // native header's height on this pushed/modal screen.
   const [layout, setLayout] = useState<{ width: number; height: number } | null>(null);
-  // Guards against the camera firing onBarcodeScanned repeatedly for the same frame/code while a
-  // mutation is already in flight — the throttler is a backstop, not something to lean on here.
+  // Guards against the camera firing onBarcodeScanned for more than one frame before `scanned`
+  // state has actually propagated and disabled the CameraView's callback.
   const scanLockedRef = useRef(false);
 
   const { mutate: checkIn, isPending } = useCheckInMutation();
@@ -73,25 +81,32 @@ export const ScannerScreen = () => {
       const payload = parseCheckInPayload(result.data);
       if (!payload) {
         setScanError('That QR code is not a valid check-in code.');
-        scanLockedRef.current = false;
+        setScanned(true);
         return;
       }
 
       checkIn(payload, {
         onSuccess: () => {
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          void longSuccessVibration();
           setCheckedIn(true);
+          setScanned(true);
           setTimeout(() => router.back(), 1200);
         },
         onError: (error) => {
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           setScanError(friendlyErrorMessage(error.errors));
-          scanLockedRef.current = false;
+          setScanned(true);
         },
       });
     },
     [checkIn],
   );
+
+  const restartScanning = useCallback(() => {
+    scanLockedRef.current = false;
+    setScanError(null);
+    setScanned(false);
+  }, []);
 
   if (!permission) {
     return (
@@ -118,9 +133,9 @@ export const ScannerScreen = () => {
         style={{ flex: 1 }}
         facing="back"
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-        onBarcodeScanned={checkedIn ? undefined : handleBarcodeScanned}
+        onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
       />
-      {!checkedIn && layout && <ScanFrameOverlay width={layout.width} height={layout.height} />}
+      {!scanned && layout && <ScanFrameOverlay width={layout.width} height={layout.height} />}
 
       <SafeAreaView edges={['bottom']} className="absolute bottom-0 left-0 right-0 p-4">
         {checkedIn && (
@@ -134,6 +149,8 @@ export const ScannerScreen = () => {
         {scanError && <ErrorMessage message={scanError} fallback="Check-in failed. Please try again." />}
 
         {isPending && <ActivityIndicator color="#3b82f6" className="mb-3" />}
+
+        {scanned && !checkedIn && <Button title="Restart scan" onPress={restartScanning} className="mb-3" />}
 
         <Button title="Cancel" variant="outline-dark" onPress={() => router.back()} />
       </SafeAreaView>
