@@ -4,12 +4,12 @@ import { LoginForm } from '@/modules/auth/components/login-form';
 
 export default function LoginPage() {
   return (
-    <Card className="mx-auto w-full max-w-sm">
+    <Card className="mx-auto w-full max-w-md py-8">
       <CardHeader className="items-center">
-        <Logo size={40} className="mb-2" />
-        <CardTitle>Lecturer Login</CardTitle>
+        <Logo size={48} className="mb-2" />
+        <CardTitle className="text-xl">Lecturer Login</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-8">
         <LoginForm />
       </CardContent>
     </Card>
