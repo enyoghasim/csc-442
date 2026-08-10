@@ -26,8 +26,11 @@
       cookie or `Authorization: Session <id>` header (see `common/utils/session.ts`)
 - [x] Auth guard for API routes — `SessionAuthGuard`, reads cookie (dashboard) or
       `Authorization: Session <id>` header (mobile) via Redis, applied to `GET /api/auth/me`
-- [ ] Role guard (student/lecturer) for protected routes — guard checks _authenticated_, not yet
-      _authorized for this role_
+- [x] Role guard (student/lecturer) for protected routes — `RolesGuard` +
+      `@Roles(...)` decorator (`common/guards/roles.guard.ts`,
+      `common/decorators/roles.decorator.ts`), looks up role fresh from the DB per request;
+      exported from `AuthModule` for Sprint 2 domain modules to consume once they have real
+      routes to restrict
 - [ ] Dashboard: login page wired to API (credentialed fetch) — still a static placeholder form
 - [x] Mobile: login screen wired to API (react-hook-form + zod, matches the reference app's form
       pattern), session id stored via expo-secure-store, attached to future requests via
