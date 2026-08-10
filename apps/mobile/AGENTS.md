@@ -23,6 +23,8 @@ src/
       _layout.tsx             Stack, redirects to /(auth)/login if useCurrentUserQuery has no user
       (tabs)/                 Bottom-tab screens: index (Home), attendance (My Attendance), settings
       scanner.tsx              Non-tab route (modal), reachable from Home's "Scan QR" button
+      attendance-day/[date].tsx  Non-tab route (pushed, native back button), reachable by tapping
+                                  any day on the My Attendance calendar
   modules/                  All business/domain logic. Route files import FROM here — never the reverse.
     <domain>/                auth, attendance, classes, sessions, shared
       components/           Domain-specific UI components (not routes)
@@ -185,16 +187,30 @@ classSessionId, token }` per the dashboard/mobile QR payload contract and posted
 every documented check-in error (400/403/404/409/429) surface through the existing
 `ErrorMessage` component; the 429 throttler message is remapped to friendlier copy in
 `scanner-screen.tsx` since the backend's raw `ThrottlerException: Too Many Requests` isn't
-end-user wording. `modules/attendance/components/attendance-calendar-screen.tsx` wires
+end-user wording. `modules/attendance/components/scan-frame-overlay.tsx` draws the bounded
+viewfinder (dimmed scrim outside a `260`px square via three flexbox bars, accent-colored corner
+brackets, a `reanimated` scan line bouncing top-to-bottom) over the raw `CameraView` — a plain
+full-screen camera preview with no framing reads as unfinished, not "scan here."
+
+`modules/attendance/components/attendance-calendar-screen.tsx` wires
 `useMyAttendanceQuery(month, year)` (`GET /api/attendance/me?month=&year=` — required, validated
 query params; response is dense, one `{date, records}` entry per day of the month) into
-`markedDates` (green dot for present/late days, red for all-absent days) and the day-tap modal
-(real class name + status + check-in time, joined with `GET /api/classes` client-side). The
-`Calendar`'s `onMonthChange` drives a `{month, year}` state that's fed straight into the query
-hook — react-query caches each month independently via the query key, so navigating months
-fetches once per new month and re-uses the cache when flipping back, same pattern as a
-billboard-availability-style month endpoint. The initial month is today's _UTC_ month/year, to
-agree with the backend's UTC day-bucketing.
+`markedDates` — **only** a day with a real present/late scan gets a green dot; a day with no
+session, or one the student missed, is left blank rather than flagged red, so a dot always means
+"you attended," not "something happened here." The `Calendar`'s `onMonthChange` drives a
+`{month, year}` state fed straight into the query hook — react-query caches each month
+independently via the query key, so navigating months fetches once per new month and re-uses the
+cache when flipping back, same pattern as a billboard-availability-style month endpoint. The
+initial month is today's _UTC_ month/year, to agree with the backend's UTC day-bucketing.
+Tapping any day — dotted or not — pushes `/(app)/attendance-day/<yyyy-MM-dd>`
+(`src/app/(app)/attendance-day/[date].tsx`, registered in `(app)/_layout.tsx`'s `Stack` with
+`headerShown: true` since the group default is `false`) rather than opening a modal — a real
+screen with a native back button, showing every record for that date via
+`modules/attendance/components/attendance-day-screen.tsx`, which calls the same
+`useMyAttendanceQuery(month, year)` for that date's month and reads its `records` straight out of
+react-query's cache (no extra request if the calendar's already loaded that month).
+`modules/attendance/lib/status.ts` centralizes `statusLabels`/`statusTextClasses`/`formatTime`/
+`formatDateHeading` so the calendar and day-detail screens don't drift on wording/color.
 
 ## Testing
 

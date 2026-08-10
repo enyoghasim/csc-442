@@ -21,6 +21,7 @@ export default function AppLayout() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: true, title: 'Scan QR' }} />
+      <Stack.Screen name="attendance-day/[date]" options={{ headerShown: true, title: 'Attendance' }} />
     </Stack>
   );
 }

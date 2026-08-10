@@ -7,6 +7,7 @@ import { Button } from '../../shared/components/button';
 import { ErrorMessage } from '../../shared/components/error-message';
 import { ThemedText } from '../../shared/components/themed-text';
 import { useCheckInMutation, type CheckInValues } from '../services/attendance.mutation';
+import { ScanFrameOverlay } from './scan-frame-overlay';
 
 // Backend's ThrottlerGuard (5/min/IP) surfaces as a raw "ThrottlerException: Too Many Requests"
 // message — friendlier wording for the scanner UI without changing the shared handleApiError()
@@ -104,6 +105,7 @@ export const ScannerScreen = () => {
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={checkedIn ? undefined : handleBarcodeScanned}
       />
+      {!checkedIn && <ScanFrameOverlay />}
 
       <SafeAreaView edges={['bottom']} className="absolute bottom-0 left-0 right-0 p-4">
         {checkedIn && (
