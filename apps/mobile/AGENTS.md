@@ -186,9 +186,15 @@ every documented check-in error (400/403/404/409/429) surface through the existi
 `ErrorMessage` component; the 429 throttler message is remapped to friendlier copy in
 `scanner-screen.tsx` since the backend's raw `ThrottlerException: Too Many Requests` isn't
 end-user wording. `modules/attendance/components/attendance-calendar-screen.tsx` wires
-`useMyAttendanceQuery` (`GET /api/attendance/me`) into `markedDates` (green dot for
-present/late days, red for all-absent days) and the day-tap modal (real class name + status +
-check-in time, joined with `GET /api/classes` client-side).
+`useMyAttendanceQuery(month, year)` (`GET /api/attendance/me?month=&year=` — required, validated
+query params; response is dense, one `{date, records}` entry per day of the month) into
+`markedDates` (green dot for present/late days, red for all-absent days) and the day-tap modal
+(real class name + status + check-in time, joined with `GET /api/classes` client-side). The
+`Calendar`'s `onMonthChange` drives a `{month, year}` state that's fed straight into the query
+hook — react-query caches each month independently via the query key, so navigating months
+fetches once per new month and re-uses the cache when flipping back, same pattern as a
+billboard-availability-style month endpoint. The initial month is today's _UTC_ month/year, to
+agree with the backend's UTC day-bucketing.
 
 ## Testing
 

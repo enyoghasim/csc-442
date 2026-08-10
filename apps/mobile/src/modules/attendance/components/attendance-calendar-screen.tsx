@@ -35,36 +35,35 @@ const statusTextClasses: Record<AttendanceStatus, string> = {
   [AttendanceStatus.Absent]: 'text-red-400',
 };
 
-// Session date (not a separate "attendance date" field) — a record belongs to the day its class
-// session started.
-function dateKey(iso: string): string {
-  return iso.slice(0, 10);
-}
-
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
+// today's UTC month/year — matches the backend's UTC day-bucketing (see attendance.service.ts's
+// historyForStudent), so what's "today" here agrees with what the backend calls "today".
+function currentUtcMonth() {
+  const now = new Date();
+  return { month: now.getUTCMonth() + 1, year: now.getUTCFullYear() };
+}
+
 export const AttendanceCalendarScreen = () => {
+  const [visibleMonth, setVisibleMonth] = useState(currentUtcMonth);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const { data: records, isLoading } = useMyAttendanceQuery();
+
+  // Refetches whenever the visible month changes (onMonthChange below) — react-query caches each
+  // { month, year } independently, so flipping back to an already-seen month doesn't re-fetch.
+  const { data: days, isLoading } = useMyAttendanceQuery(visibleMonth.month, visibleMonth.year);
   const { data: classes } = useClassesQuery();
 
   const classNameFor = (classId: string) => classes?.find((c) => c.id === classId)?.name ?? 'Unknown class';
 
   const recordsByDate = useMemo(() => {
     const map = new Map<string, AttendanceHistoryRecord[]>();
-    for (const record of records ?? []) {
-      const key = dateKey(record.startsAt);
-      const existing = map.get(key);
-      if (existing) {
-        existing.push(record);
-      } else {
-        map.set(key, [record]);
-      }
+    for (const day of days ?? []) {
+      if (day.records.length > 0) map.set(day.date, day.records);
     }
     return map;
-  }, [records]);
+  }, [days]);
 
   // A day with any attended (present/late) session shows green; a day where every session was
   // missed shows red — matching the dotColor values the placeholder UI already used.
@@ -88,7 +87,12 @@ export const AttendanceCalendarScreen = () => {
       {isLoading ? (
         <ActivityIndicator color="#3b82f6" className="mt-8" />
       ) : (
-        <Calendar theme={darkCalendarTheme} markedDates={markedDates} onDayPress={(day: DateData) => setSelectedDay(day.dateString)} />
+        <Calendar
+          theme={darkCalendarTheme}
+          markedDates={markedDates}
+          onDayPress={(day: DateData) => setSelectedDay(day.dateString)}
+          onMonthChange={(day: DateData) => setVisibleMonth({ month: day.month, year: day.year })}
+        />
       )}
 
       <Modal visible={selectedDay !== null} transparent animationType="fade">

@@ -13,3 +13,11 @@ export interface AttendanceHistoryRecord {
   status: AttendanceStatus;
   checkedInAt: string | null;
 }
+
+// One entry per calendar day of the requested month — dense, every day, not just days with a
+// session, so the calendar screen can index straight by date. Mirrors apps/backend's
+// DayAttendance (services/attendance/attendance.service.ts).
+export interface DayAttendance {
+  date: string; // 'yyyy-MM-dd', UTC
+  records: AttendanceHistoryRecord[];
+}
