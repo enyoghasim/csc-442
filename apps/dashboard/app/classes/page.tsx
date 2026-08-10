@@ -1,30 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ClassesTable } from '@/modules/classes/components/classes-table';
+import { CreateClassDialog } from '@/modules/classes/components/create-class-dialog';
 
 export default function ClassesPage() {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Classes</CardTitle>
+        <CreateClassDialog />
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Code</TableHead>
-              <TableHead>Students</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow>
-              <TableCell colSpan={3} className="text-center text-muted-foreground">
-                {/* TODO (Sprint 2): create/edit/list classes */}
-                No classes yet
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+        <ClassesTable />
       </CardContent>
     </Card>
   );
