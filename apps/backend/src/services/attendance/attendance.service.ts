@@ -6,10 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AttendanceStatus } from '@attendance/shared';
-import {
-  AttendanceRecordsRepository,
-  AttendanceHistoryRow,
-} from '../../repositories/attendance-records/attendance-records.repository';
+import { AttendanceRecordsRepository } from '../../repositories/attendance-records/attendance-records.repository';
 import { EnrollmentsRepository } from '../../repositories/enrollments/enrollments.repository';
 import { ClassSessionsRepository } from '../../repositories/class-sessions/class-sessions.repository';
 import { ClassesRepository } from '../../repositories/classes/classes.repository';
@@ -18,6 +15,15 @@ import { redis } from '../../config/redis';
 import { qrTokenKey } from '../../config/redis-keys';
 import { isUniqueViolation } from '../../database/database.types';
 import { toCsv } from '../../common/utils/csv.util';
+
+export interface AttendanceHistoryRow {
+  classSessionId: string;
+  classId: string;
+  startsAt: Date;
+  endsAt: Date;
+  status: AttendanceStatus;
+  checkedInAt: Date | null;
+}
 
 export interface SessionRosterEntry {
   studentId: string;
@@ -89,8 +95,36 @@ export class AttendanceService {
     }
   }
 
+  // Every session of every class the student is enrolled in, real record where one exists —
+  // 'absent' synthesized for anyone with no record for a session that's already ended (mirrors
+  // rosterForSession's default-to-absent logic). Sessions that haven't ended yet are omitted
+  // rather than shown as absent, so the mobile calendar doesn't mark today's not-yet-happened
+  // class red before its check-in window even opens.
   async historyForStudent(studentId: string): Promise<AttendanceHistoryRow[]> {
-    return this.attendanceRecordsRepository.findByStudent(studentId);
+    const [sessions, records] = await Promise.all([
+      this.classSessionsRepository.findByStudent(studentId),
+      this.attendanceRecordsRepository.findByStudent(studentId),
+    ]);
+
+    const recordBySession = new Map(records.map((r) => [r.classSessionId, r]));
+    const now = new Date();
+
+    return sessions
+      .filter(
+        (session) => recordBySession.has(session.id) || session.endsAt < now,
+      )
+      .map((session) => {
+        const record = recordBySession.get(session.id);
+        return {
+          classSessionId: session.id,
+          classId: session.classId,
+          startsAt: session.startsAt,
+          endsAt: session.endsAt,
+          status: record?.status ?? AttendanceStatus.Absent,
+          checkedInAt: record?.checkedInAt ?? null,
+        };
+      })
+      .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime());
   }
 
   // Every enrolled student, with 'absent' filled in for anyone missing an attendance record.

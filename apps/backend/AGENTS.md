@@ -152,7 +152,11 @@ create/update/schedule/see reports for classes they teach), not by the DB — `g
   `modules/attendance/attendance.module.ts`; validates the session window, the student's
   enrollment, and the token against Redis, in that order, before writing an attendance record —
   duplicate check-in is a `409` via the same `isUniqueViolation()` path), `GET /api/attendance/me`
-  (student's own history, joined with its session's start/end), `GET
+  (student's own history — every session of every class they're enrolled in, real record where
+  one exists, `'absent'` synthesized for any _past_ session with no record, same default-absent
+  reasoning as the roster below; a session that hasn't ended yet is omitted rather than shown
+  absent, so it doesn't read as "already marked absent" before its check-in window even opens),
+  `GET
 /api/attendance/sessions/:sessionId` (lecturer-only roster — every enrolled student, `'absent'`
   filled in for anyone with no record for that session), `GET
 /api/attendance/classes/:classId/summary` (lecturer-only, sessions-present / total-sessions

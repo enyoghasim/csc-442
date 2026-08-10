@@ -7,15 +7,6 @@ import type { DbExecutor } from '../../database/database.types';
 export type NewAttendanceRecord = typeof attendanceRecords.$inferInsert;
 export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
 
-export interface AttendanceHistoryRow {
-  classSessionId: string;
-  classId: string;
-  startsAt: Date;
-  endsAt: Date;
-  status: AttendanceRecord['status'];
-  checkedInAt: Date | null;
-}
-
 export interface ClassAttendanceRow {
   classSessionId: string;
   studentId: string;
@@ -38,26 +29,22 @@ export class AttendanceRecordsRepository {
     return inserted;
   }
 
-  // A student's full attendance history, joined with the session it belongs to (start/end +
-  // class) so the mobile calendar has everything it needs without a second round trip.
+  // Raw attendance rows for one student, across every session they've ever checked into — the
+  // service combines these with their full session list (ClassSessionsRepository.findByStudent)
+  // to fill in "absent" for past sessions with no record, the same way findByClassSession does
+  // for a single session's roster.
   async findByStudent(
     studentId: string,
     executor: DbExecutor = this.databaseService.db,
-  ): Promise<AttendanceHistoryRow[]> {
+  ): Promise<ClassAttendanceRow[]> {
     return executor
       .select({
         classSessionId: attendanceRecords.classSessionId,
-        classId: classSessions.classId,
-        startsAt: classSessions.startsAt,
-        endsAt: classSessions.endsAt,
+        studentId: attendanceRecords.studentId,
         status: attendanceRecords.status,
         checkedInAt: attendanceRecords.checkedInAt,
       })
       .from(attendanceRecords)
-      .innerJoin(
-        classSessions,
-        eq(attendanceRecords.classSessionId, classSessions.id),
-      )
       .where(eq(attendanceRecords.studentId, studentId));
   }
 

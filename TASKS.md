@@ -80,7 +80,8 @@
       (per-session roster, every enrolled student, 'absent' filled in for anyone with no
       record) and `GET /api/attendance/classes/:id/summary` (per-student sessions-present /
       total-sessions percentage across the whole class); `GET /api/attendance/me` is the
-      student-facing equivalent (own history, joined with session start/end)
+      student-facing equivalent (own history, 'absent' synthesized for any past session with
+      no check-in record, future sessions omitted rather than shown absent)
 - [x] Dashboard: attendance report per class session/class (%, present/absent list) — UI
       (`app/reports/page.tsx`, class picker + `modules/attendance/components/class-summary-table.tsx`;
       the per-session roster/present-absent list lives on `app/sessions/[id]/page.tsx` instead,

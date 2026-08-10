@@ -70,6 +70,7 @@ describe('AttendanceService', () => {
     classSessionsRepository = {
       findById: jest.fn(),
       findByClassId: jest.fn(),
+      findByStudent: jest.fn(),
     } as unknown as jest.Mocked<ClassSessionsRepository>;
     classesRepository = {
       findById: jest.fn(),
@@ -173,6 +174,66 @@ describe('AttendanceService', () => {
       await expect(
         service.checkIn(studentId, activeSession.id, 'the-real-token'),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('historyForStudent', () => {
+    const pastSession: ClassSession = {
+      id: 'past-no-record',
+      classId: klass.id,
+      startsAt: new Date('2026-08-11T09:00:00.000Z'),
+      endsAt: new Date('2026-08-11T11:00:00.000Z'),
+      createdAt: now,
+      updatedAt: now,
+    };
+    const futureSession: ClassSession = {
+      id: 'future-no-record',
+      classId: klass.id,
+      startsAt: new Date('2026-08-13T09:00:00.000Z'),
+      endsAt: new Date('2026-08-13T11:00:00.000Z'),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    it('synthesizes absent for a past session with no record, omits a future one', async () => {
+      classSessionsRepository.findByStudent.mockResolvedValue([
+        activeSession,
+        pastSession,
+        futureSession,
+      ]);
+      attendanceRecordsRepository.findByStudent.mockResolvedValue([
+        {
+          classSessionId: activeSession.id,
+          studentId,
+          status: 'present',
+          checkedInAt: now,
+        },
+      ]);
+
+      const result = await service.historyForStudent(studentId);
+
+      expect(result).toEqual([
+        {
+          classSessionId: activeSession.id,
+          classId: activeSession.classId,
+          startsAt: activeSession.startsAt,
+          endsAt: activeSession.endsAt,
+          status: 'present',
+          checkedInAt: now,
+        },
+        {
+          classSessionId: pastSession.id,
+          classId: pastSession.classId,
+          startsAt: pastSession.startsAt,
+          endsAt: pastSession.endsAt,
+          status: 'absent',
+          checkedInAt: null,
+        },
+      ]);
+      // futureSession has no record and hasn't ended yet — must not appear at all.
+      expect(
+        result.find((r) => r.classSessionId === futureSession.id),
+      ).toBeUndefined();
     });
   });
 
