@@ -43,3 +43,15 @@ export function validateApiResponse<T>(response: ApiResponse<T>): T {
   }
   return response.data as T;
 }
+
+// Never render a bare numeric date like "8/10/2026" — ambiguous (MM/DD/YYYY vs DD/MM/YYYY
+// depending on locale) — same rule apps/mobile's lib/status.ts follows for formatHeaderDate.
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}

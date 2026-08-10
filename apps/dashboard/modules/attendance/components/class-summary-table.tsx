@@ -19,7 +19,7 @@ export function ClassSummaryTable({ classId }: { classId: string | undefined }) 
       <TableBody>
         {!classId && (
           <TableRow>
-            <TableCell colSpan={4} className="text-center text-muted-foreground">
+            <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
               Pick a class to see its report.
             </TableCell>
           </TableRow>
@@ -27,7 +27,7 @@ export function ClassSummaryTable({ classId }: { classId: string | undefined }) 
 
         {classId && isLoading && (
           <TableRow>
-            <TableCell colSpan={4} className="text-center text-muted-foreground">
+            <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
               Loading report...
             </TableCell>
           </TableRow>
@@ -35,7 +35,7 @@ export function ClassSummaryTable({ classId }: { classId: string | undefined }) 
 
         {classId && isError && (
           <TableRow>
-            <TableCell colSpan={4} className="text-center text-destructive">
+            <TableCell colSpan={4} className="py-8 text-center text-destructive">
               Couldn&apos;t load the report.
             </TableCell>
           </TableRow>
@@ -43,7 +43,7 @@ export function ClassSummaryTable({ classId }: { classId: string | undefined }) 
 
         {classId && !isLoading && !isError && summary?.length === 0 && (
           <TableRow>
-            <TableCell colSpan={4} className="text-center text-muted-foreground">
+            <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
               No enrolled students yet.
             </TableCell>
           </TableRow>
@@ -51,12 +51,12 @@ export function ClassSummaryTable({ classId }: { classId: string | undefined }) 
 
         {summary?.map((entry) => (
           <TableRow key={entry.studentId}>
-            <TableCell className="font-medium">{entry.name}</TableCell>
-            <TableCell>{entry.regNumber ?? '—'}</TableCell>
-            <TableCell>
+            <TableCell className="py-3 font-medium">{entry.name}</TableCell>
+            <TableCell className="py-3">{entry.regNumber ?? '—'}</TableCell>
+            <TableCell className="py-3">
               {entry.sessionsPresent} / {entry.totalSessions}
             </TableCell>
-            <TableCell>{entry.percentage.toFixed(1)}%</TableCell>
+            <TableCell className="py-3">{entry.percentage.toFixed(1)}%</TableCell>
           </TableRow>
         ))}
       </TableBody>

@@ -104,6 +104,23 @@ to content. Both variants render the exact same `SidebarNav` content — don't a
 links/behavior to one without the other. Tables don't need any special mobile handling beyond
 what they already have: shadcn's `Table` wraps in `overflow-x-auto` by default.
 
+## Tables — spacing and date formatting
+
+All four data tables (`classes-table.tsx`, `sessions-table.tsx`, `session-roster-table.tsx`,
+`class-summary-table.tsx`) add `className="py-3"` to every data-row `TableCell` — shadcn's default
+`p-2` reads cramped once rows have real content next to each other. Their loading/error/empty
+placeholder rows use `py-8` instead, so a single-line status message doesn't look like a sliver
+sitting under the header. Row hover itself needs no extra work — `TableRow`
+(`components/ui/table.tsx`) already ships `hover:bg-muted/50`; don't re-add it per table.
+
+Any timestamp rendered as a full date (not just a time) goes through
+`modules/shared/lib/util.ts`'s `formatDateTime()` (e.g. "Aug 10, 2026, 9:00 AM") — never
+`Date.prototype.toLocaleString()` directly, which defaults to ambiguous `M/D/YYYY` in most
+locales. Same rule as apps/mobile's `lib/status.ts` `formatHeaderDate`, just dashboard's version
+also keeps the time since these are session start/end timestamps, not day headers. A time-only
+value (e.g. roster's "checked in at") can still use `toLocaleTimeString()` directly — there's no
+ambiguity once the date component is dropped.
+
 ## Logout confirmation
 
 `SidebarNav`'s logout button is an `AlertDialog` trigger, not a direct `onClick={() => logout()}`
@@ -203,7 +220,7 @@ Every mutating request goes through `modules/shared/lib/api.ts`'s axios instance
 (`withCredentials: true`), so the httpOnly session cookie the backend sets on
 `POST /api/auth/login` is stored and resent automatically — the backend's CORS config
 (`apps/backend/src/main.ts`) already sets `credentials: true`. The CSV export
-(`modules/attendance/components/export-summary-link.tsx`) is the one exception: a plain
+(`modules/attendance/components/export-summary-dropdown.tsx`'s CSV item) is the one exception: a plain
 `<a href download>` top-level navigation instead of an axios call, since it's a file download and
 the cookie is `SameSite=Lax` (sent on top-level GET navigations regardless). **No JWT, ever** —
 same hard rule as the backend; the cookie carries only an opaque session id, never read or stored

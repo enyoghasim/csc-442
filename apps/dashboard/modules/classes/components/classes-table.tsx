@@ -19,7 +19,7 @@ export function ClassesTable() {
       <TableBody>
         {isLoading && (
           <TableRow>
-            <TableCell colSpan={3} className="text-center text-muted-foreground">
+            <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
               Loading classes...
             </TableCell>
           </TableRow>
@@ -27,7 +27,7 @@ export function ClassesTable() {
 
         {isError && (
           <TableRow>
-            <TableCell colSpan={3} className="text-center text-destructive">
+            <TableCell colSpan={3} className="py-8 text-center text-destructive">
               Couldn&apos;t load classes.
             </TableCell>
           </TableRow>
@@ -35,7 +35,7 @@ export function ClassesTable() {
 
         {!isLoading && !isError && classes?.length === 0 && (
           <TableRow>
-            <TableCell colSpan={3} className="text-center text-muted-foreground">
+            <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
               No classes yet
             </TableCell>
           </TableRow>
@@ -43,9 +43,9 @@ export function ClassesTable() {
 
         {classes?.map((klass) => (
           <TableRow key={klass.id}>
-            <TableCell className="font-medium">{klass.name}</TableCell>
-            <TableCell>{klass.code}</TableCell>
-            <TableCell className="text-right">
+            <TableCell className="py-3 font-medium">{klass.name}</TableCell>
+            <TableCell className="py-3">{klass.code}</TableCell>
+            <TableCell className="py-3 text-right">
               <EnrollStudentDialog klass={klass} />
             </TableCell>
           </TableRow>

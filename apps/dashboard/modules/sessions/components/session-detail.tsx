@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SessionRosterTable } from '@/modules/attendance/components/session-roster-table';
+import { formatDateTime } from '@/modules/shared/lib/util';
 import { useSessionsQuery } from '../services/sessions.query';
 import { QrDisplay } from './qr-display';
 
@@ -15,7 +16,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>{session ? new Date(session.startsAt).toLocaleString() : 'Session'}</CardTitle>
+          <CardTitle>{session ? formatDateTime(session.startsAt) : 'Session'}</CardTitle>
         </CardHeader>
         <CardContent className="flex justify-center">
           {isLoading && <p className="text-sm text-muted-foreground">Loading session...</p>}
