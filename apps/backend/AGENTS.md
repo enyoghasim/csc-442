@@ -144,8 +144,9 @@ create/update/schedule/see reports for classes they teach), not by the DB — `g
   `POST/GET /api/sessions` (schedule is lecturer-only, must own the class; list is role-aware
   same as classes), `GET /api/sessions/:id/qr-token` (lecturer-only, only while the session is
   inside its `[startsAt, endsAt]` window — issues a fresh random token into Redis via
-  `config/redis-keys.ts`'s `qrTokenKey`/`QR_TOKEN_TTL_SECONDS` every call, overwriting whatever
-  was there; there's no separate "fetch without rotating"). `ClassSessionsService.getOwnedSession`
+  `config/redis-keys.ts`'s `qrTokenKey`/`QR_TOKEN_TTL_SECONDS` (39s — authenticator-app-style,
+  a buffer past the dashboard's 15s rotation interval, not a match to it) every call, overwriting
+  whatever was there; there's no separate "fetch without rotating"). `ClassSessionsService.getOwnedSession`
   is public and reused by `AttendanceService`'s session-roster endpoint.
 - **`attendance`** (`controllers/attendance.controller.ts`) — `POST /api/attendance/check-in`
   (student-only, rate-limited 5/min/IP via `@nestjs/throttler`'s `ThrottlerGuard`, configured in
