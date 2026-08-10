@@ -29,9 +29,8 @@ export default function AuthLayout() {
           title: 'Log in',
           headerTitleAlign: 'center',
           headerBackVisible: false,
-          headerLeftContainerStyle: { paddingLeft: 0 },
           headerLeft: () => (
-            <Pressable onPress={() => router.back()} hitSlop={12} className="h-10 w-10 items-center justify-center">
+            <Pressable onPress={() => router.back()} hitSlop={12} className="-ml-2 h-10 w-10 items-center justify-center">
               <HugeiconsIcon icon={ArrowLeft01Icon} size={24} color="#ffffff" />
             </Pressable>
           ),

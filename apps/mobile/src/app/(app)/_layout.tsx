@@ -1,4 +1,7 @@
-import { Redirect, Stack } from 'expo-router';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Redirect, router, Stack } from 'expo-router';
+import { Pressable } from 'react-native';
 import { useCurrentUserQuery } from '../../modules/auth/services/auth.query';
 
 // Mirrors the reference app's (app) group: this is the authenticated-only stack, gated on
@@ -22,11 +25,23 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: true, title: 'Scan QR' }} />
       {/* No static title here — attendance-day-screen.tsx sets it per-instance (the date being
-          viewed) via its own nested <Stack.Screen options={...}>. headerBackTitle is set here
-          since it doesn't vary: without it, the back button falls back to the PREVIOUS screen's
-          route name — "(tabs)", since that Stack.Screen above has no title of its own — which is
-          not a string a user should ever see. */}
-      <Stack.Screen name="attendance-day/[date]" options={{ headerShown: true, headerBackTitle: '' }} />
+          viewed) via its own nested <Stack.Screen options={...}>. headerBackTitle: '' alone still
+          let iOS fall back to rendering the PREVIOUS screen's route name — "(tabs)", since that
+          Stack.Screen above has no title of its own — once the empty string collapsed. Same fix
+          as (auth)/_layout.tsx's login screen: hide the default back button entirely and render a
+          plain icon-only one, so there's no route-derived label left to leak through. */}
+      <Stack.Screen
+        name="attendance-day/[date]"
+        options={{
+          headerShown: true,
+          headerBackVisible: false,
+          headerLeft: () => (
+            <Pressable onPress={() => router.back()} hitSlop={12} className="-ml-2 h-10 w-10 items-center justify-center">
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={24} color="#ffffff" />
+            </Pressable>
+          ),
+        }}
+      />
     </Stack>
   );
 }
