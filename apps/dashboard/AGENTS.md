@@ -59,8 +59,9 @@ components/
   layout/sidebar.tsx           shared nav — 'use client' (needs useCurrentUserQuery for the name
                                 display + useLogoutMutation for the logout button), highlights the
                                 active route, renders <Logo />
-  logo.tsx                     inline-SVG "A" mark — mirrors apps/mobile's assets/logo-mark.png
-                                and repo-root brand/logo-mark.svg; keep all three in sync
+  logo.tsx                     inline-SVG "A" mark, flat/no gradient — mirrors apps/mobile's
+                                assets/logo-mark.png and repo-root brand/monochrome.svg; keep
+                                all three in sync
 assets/fonts/                  Google Sans .ttf files, same copies as apps/mobile/assets/fonts/
 lib/utils.ts                   shadcn's cn() helper (clsx + tailwind-merge) — the ONLY cn(), see
                                 modules/shared/lib/util.ts note above
@@ -107,9 +108,13 @@ the 400 as an error state.
   `accent.hover`/`danger.hover`. Keep them in sync if either changes; don't let them drift back to
   shadcn's neutral defaults.
 - **Logo**: `components/logo.tsx` — inline SVG, not an `<img>`, so it stays crisp at any size.
-  Used in the sidebar and the login card. Mirrors `apps/mobile/assets/logo-mark.png` (rasterized
-  from the same source at repo-root `brand/logo-mark.svg`) — if the mark changes, update the SVG
-  path data here too.
+  Used in the sidebar and the login card. Flat white mark, no gradient/shadow — mirrors
+  `apps/mobile/assets/logo-mark.png` (both rasterized from the same source at repo-root
+  `brand/monochrome.svg`), **not** `brand/logo-mark.svg`'s glossy chrome/glass treatment, which is
+  reserved for OS-level app icons only (see `brand/README.md`) and reads badly at these small
+  inline sizes. If the mark changes, update the SVG path data here too. The browser-tab favicon
+  (`app/icon.png`/`apple-icon.png`) follows the same flat-on-web reasoning — generated from
+  `brand/icon-mono.svg` (flat mark on black square), not `brand/icon.svg`'s gradient version.
 - The rendered QR code sits in a white card (`bg-white p-4` in `qr-display.tsx`) even on this
   dark-only app — QR scanners need real contrast, not the dark theme's `--background`.
 

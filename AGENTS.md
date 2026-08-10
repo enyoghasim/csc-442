@@ -20,9 +20,11 @@ Monorepo for the Attendance Tracking System: three independent apps plus one sha
 
 Both user-facing apps share one dark-only visual identity, ported from a sister project:
 Google Sans typography (actual font files in each app's `assets/fonts/`, a known licensing
-tradeoff the user accepted knowingly), the same "A" logo mark (source at `brand/logo-mark.svg`,
-rasterized into `apps/mobile/assets/`, re-implemented as inline SVG in
-`apps/dashboard/components/logo.tsx`), and the same accent/danger color hex values
+tradeoff the user accepted knowingly), the same "A" logo mark — flat, no gradient, for in-app use
+in both (source at `brand/monochrome.svg`, rasterized into `apps/mobile/assets/`, re-implemented
+as inline SVG in `apps/dashboard/components/logo.tsx`; `brand/logo-mark.svg`'s glossy chrome/glass
+version is reserved for OS-level app icons only, see `brand/README.md`) — and the same
+accent/danger color hex values
 (`#3b82f6`/`#ef4444`). Changing any of these in one app without the other is a regression, not a
 style choice — see each app's `AGENTS.md` "Styling" section for specifics.
 
