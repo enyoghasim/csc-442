@@ -52,23 +52,42 @@
 
 ## Sprint 3 — QR Check-in
 
-- [ ] Backend: generate rotating QR token per active class session, store in Redis with TTL
-- [ ] Backend: endpoint to fetch current QR token for a class session
-- [ ] Backend: check-in endpoint — validate token, session window, enrollment; write attendance record
-- [ ] Rate limiting on check-in endpoint
+- [x] Backend: generate rotating QR token per active class session, store in Redis with TTL —
+      `GET /api/sessions/:id/qr-token` (lecturer only, must own class, session must be within
+      its `[startsAt, endsAt]` window), overwrites `qr:<classSessionId>` with a fresh random
+      token + `QR_TOKEN_TTL_SECONDS` TTL every call — poll it to rotate the displayed code
+- [x] Backend: endpoint to fetch current QR token for a class session — same endpoint as above
+      (fetch and rotate are the same action; there's no separate "current without rotating")
+- [x] Backend: check-in endpoint — `POST /api/attendance/check-in` (student only), validates
+      session window, enrollment, and the token against Redis, then writes an attendance
+      record; duplicate check-in returns 409, not a raw DB error
+- [x] Rate limiting on check-in endpoint — `@nestjs/throttler`, 5 requests/min per IP
+      (`ThrottlerModule.forRoot` in `modules/attendance/attendance.module.ts`)
 - [ ] Dashboard: live QR display on session page, auto-refreshing
 - [ ] Mobile: wire expo-camera QR scanner to check-in endpoint
 
 ## Sprint 4 — History & Reports
 
 - [ ] Mobile My Attendance tab: wire calendar to real attendance data, tap-day detail view
-- [ ] Dashboard: attendance report per class session/class (%, present/absent list)
-- [ ] CSV export endpoint + dashboard export button
+- [x] Backend: attendance report per class session/class — `GET /api/attendance/sessions/:id`
+      (per-session roster, every enrolled student, 'absent' filled in for anyone with no
+      record) and `GET /api/attendance/classes/:id/summary` (per-student sessions-present /
+      total-sessions percentage across the whole class); `GET /api/attendance/me` is the
+      student-facing equivalent (own history, joined with session start/end)
+- [ ] Dashboard: attendance report per class session/class (%, present/absent list) — UI
+- [x] Backend: CSV export endpoint — `GET /api/attendance/classes/:id/summary/export`
+- [ ] Dashboard: export button — UI
 
 ## Sprint 5 — Testing & Report
 
-- [ ] Unit tests: backend route handlers/services (Jest or Vitest)
+- [x] Unit tests: backend services — `AuthService`, `ClassesService`, `ClassSessionsService`,
+      `AttendanceService` (40 tests, Jest, repositories/Redis mocked; `jest.config`'s
+      `transformIgnorePatterns` needed no change in the end — see the `packages/shared`
+      `package.json` fix below, which was the actual fix)
 - [ ] Integration tests: login, session, attendance endpoints
-- [ ] Manual QA pass: expired session, expired QR token, duplicate scan, wrong class edge cases
+- [x] Manual QA pass (backend): exercised expired/inactive QR window, wrong token, duplicate
+      check-in, unenrolled student, wrong-role rejection, and rate-limit-exceeded against the
+      running dev server + Postgres/Redis — see commit history for the full pass
+- [ ] Manual QA pass (dashboard/mobile): expired session, duplicate scan, wrong class edge cases
 - [ ] Technical report draft
 - [ ] Final polish + demo prep

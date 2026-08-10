@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { DatabaseService } from '../../database/database.service';
-import { enrollments } from '../../database/schema';
+import { enrollments, users } from '../../database/schema';
 import type { DbExecutor } from '../../database/database.types';
 
 export type NewEnrollment = typeof enrollments.$inferInsert;
 export type Enrollment = typeof enrollments.$inferSelect;
+
+export interface EnrolledStudent {
+  studentId: string;
+  name: string;
+  regNumber: string | null;
+}
 
 @Injectable()
 export class EnrollmentsRepository {
@@ -38,5 +44,22 @@ export class EnrollmentsRepository {
       .values(enrollment)
       .returning();
     return inserted;
+  }
+
+  // The full class roster — used to build attendance reports (every enrolled student, whether
+  // or not they have an attendance record for a given session).
+  async findByClassWithStudents(
+    classId: string,
+    executor: DbExecutor = this.databaseService.db,
+  ): Promise<EnrolledStudent[]> {
+    return executor
+      .select({
+        studentId: enrollments.studentId,
+        name: users.name,
+        regNumber: users.regNumber,
+      })
+      .from(enrollments)
+      .innerJoin(users, eq(enrollments.studentId, users.id))
+      .where(eq(enrollments.classId, classId));
   }
 }

@@ -11,5 +11,8 @@ import { AuthModule } from '../auth/auth.module';
   imports: [AuthModule],
   controllers: [ClassesController],
   providers: [ClassesService, ClassesRepository, EnrollmentsRepository],
+  // ClassesRepository is needed by ClassSessionsModule/AttendanceModule for ownership checks
+  // (a session/attendance report belongs to a class, which belongs to a lecturer).
+  exports: [ClassesRepository],
 })
 export class ClassesModule {}
