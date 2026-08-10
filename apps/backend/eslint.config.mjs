@@ -33,4 +33,12 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  {
+    // expect(mockedRepo.method).toHaveBeenCalledWith(...) is the standard Jest assertion shape,
+    // but unbound-method can't tell a jest.fn() apart from a real method that relies on `this`.
+    files: ['**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
 );
