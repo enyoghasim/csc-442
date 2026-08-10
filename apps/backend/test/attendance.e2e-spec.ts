@@ -26,6 +26,7 @@ describe('Attendance / QR check-in (e2e)', () => {
   const classCode = `E2E-ATTENDANCE-${Date.now()}`;
   let classId: string;
   let sessionId: string;
+  let sessionStartsAt: Date;
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -57,14 +58,16 @@ describe('Attendance / QR check-in (e2e)', () => {
       .send({ regNumber: SEEDED_STUDENT.identifier })
       .expect(200);
 
-    const now = new Date();
+    sessionStartsAt = new Date();
     const sessionRes = await request(app.getHttpServer())
       .post('/api/sessions')
       .set('Cookie', lecturerCookie)
       .send({
         classId,
-        startsAt: now.toISOString(),
-        endsAt: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+        startsAt: sessionStartsAt.toISOString(),
+        endsAt: new Date(
+          sessionStartsAt.getTime() + 2 * 60 * 60 * 1000,
+        ).toISOString(),
       })
       .expect(200);
     sessionId = sessionRes.body.data.id;
@@ -164,9 +167,17 @@ describe('Attendance / QR check-in (e2e)', () => {
 
     const history = await request(app.getHttpServer())
       .get('/api/attendance/me')
+      .query({
+        month: sessionStartsAt.getUTCMonth() + 1,
+        year: sessionStartsAt.getUTCFullYear(),
+      })
       .set('Cookie', studentCookie)
       .expect(200);
-    expect(history.body.data).toContainEqual(
+    const sessionDate = sessionStartsAt.toISOString().slice(0, 10);
+    const dayEntry = history.body.data.find(
+      (d: { date: string }) => d.date === sessionDate,
+    );
+    expect(dayEntry.records).toContainEqual(
       expect.objectContaining({ classSessionId: sessionId, status: 'present' }),
     );
 
@@ -176,6 +187,18 @@ describe('Attendance / QR check-in (e2e)', () => {
       .expect(200);
     expect(csv.headers['content-type']).toContain('text/csv');
     expect(csv.text).toContain(SEEDED_STUDENT.identifier);
+  });
+
+  it('rejects GET /api/attendance/me with missing or out-of-range month/year', async () => {
+    await request(app.getHttpServer())
+      .get('/api/attendance/me')
+      .set('Cookie', studentCookie)
+      .expect(400);
+    await request(app.getHttpServer())
+      .get('/api/attendance/me')
+      .query({ month: 13, year: 2026 })
+      .set('Cookie', studentCookie)
+      .expect(400);
   });
 
   it('rejects everything above from a student role via the lecturer-only routes', async () => {

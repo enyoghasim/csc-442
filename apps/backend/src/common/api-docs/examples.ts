@@ -37,13 +37,19 @@ export const QR_TOKEN_EXAMPLE = {
 };
 
 /** Swagger example of a student's attendance history row (GET /api/attendance/me). */
-export const ATTENDANCE_HISTORY_EXAMPLE = {
+export const ATTENDANCE_HISTORY_RECORD_EXAMPLE = {
   classSessionId: '1f9a2b3c-4d5e-6f70-8192-a3b4c5d6e7f8',
   classId: '7c1e3a2d-9f4b-4c8a-8d1e-2b6f5a9c0e17',
   startsAt: '2026-08-12T09:00:00.000Z',
   endsAt: '2026-08-12T11:00:00.000Z',
   status: 'present',
   checkedInAt: '2026-08-12T09:03:12.000Z',
+};
+
+/** Swagger example of one day of GET /api/attendance/me's response — dense, one per calendar day. */
+export const ATTENDANCE_HISTORY_DAY_EXAMPLE = {
+  date: '2026-08-12',
+  records: [ATTENDANCE_HISTORY_RECORD_EXAMPLE],
 };
 
 /** Swagger example of one row of GET /api/attendance/sessions/:sessionId's roster response. */

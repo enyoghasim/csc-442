@@ -151,12 +151,15 @@ create/update/schedule/see reports for classes they teach), not by the DB — `g
   (student-only, rate-limited 5/min/IP via `@nestjs/throttler`'s `ThrottlerGuard`, configured in
   `modules/attendance/attendance.module.ts`; validates the session window, the student's
   enrollment, and the token against Redis, in that order, before writing an attendance record —
-  duplicate check-in is a `409` via the same `isUniqueViolation()` path), `GET /api/attendance/me`
-  (student's own history — every session of every class they're enrolled in, real record where
-  one exists, `'absent'` synthesized for any _past_ session with no record, same default-absent
-  reasoning as the roster below; a session that hasn't ended yet is omitted rather than shown
-  absent, so it doesn't read as "already marked absent" before its check-in window even opens),
-  `GET
+  duplicate check-in is a `409` via the same `isUniqueViolation()` path), `GET
+/api/attendance/me?month=&year=` (student's own history for one calendar month — `month`/`year`
+  are required query params, validated 1-12/2000-2100; response is dense, one entry per day of
+  the month whether or not it has a session, `{date, records}[]`, mirroring a
+  billboard-availability-style month endpoint so the mobile calendar fetches once per visible
+  month via `onMonthChange` instead of paging a flat history list. Real record where one exists,
+  `'absent'` synthesized for any _past_ session with no record, same default-absent reasoning as
+  the roster below; a session that hasn't ended yet has no entry in its day's `records`, so it
+  doesn't read as "already marked absent" before its check-in window even opens), `GET
 /api/attendance/sessions/:sessionId` (lecturer-only roster — every enrolled student, `'absent'`
   filled in for anyone with no record for that session), `GET
 /api/attendance/classes/:classId/summary` (lecturer-only, sessions-present / total-sessions

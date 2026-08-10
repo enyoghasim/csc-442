@@ -25,6 +25,14 @@ export interface AttendanceHistoryRow {
   checkedInAt: Date | null;
 }
 
+// One entry per calendar day of the requested month (dense — every day, not just days with a
+// session), mirroring a billboard-availability-style month endpoint: the client fetches once per
+// visible month and indexes the response by date instead of paging through a flat history list.
+export interface DayAttendance {
+  date: string; // 'yyyy-MM-dd', UTC
+  records: AttendanceHistoryRow[];
+}
+
 export interface SessionRosterEntry {
   studentId: string;
   name: string;
@@ -95,12 +103,17 @@ export class AttendanceService {
     }
   }
 
-  // Every session of every class the student is enrolled in, real record where one exists —
-  // 'absent' synthesized for anyone with no record for a session that's already ended (mirrors
-  // rosterForSession's default-to-absent logic). Sessions that haven't ended yet are omitted
-  // rather than shown as absent, so the mobile calendar doesn't mark today's not-yet-happened
-  // class red before its check-in window even opens.
-  async historyForStudent(studentId: string): Promise<AttendanceHistoryRow[]> {
+  // One entry per day of the given month (UTC), dense — every day, not just days with a session,
+  // same shape the mobile calendar indexes by date. Real record where one exists, 'absent'
+  // synthesized for a session that's already ended with no record (mirrors rosterForSession's
+  // default-to-absent logic). A session that hasn't ended yet is left out of its day's records
+  // entirely, so the calendar doesn't mark today's not-yet-happened class red before its
+  // check-in window even opens.
+  async historyForStudent(
+    studentId: string,
+    month: number,
+    year: number,
+  ): Promise<DayAttendance[]> {
     const [sessions, records] = await Promise.all([
       this.classSessionsRepository.findByStudent(studentId),
       this.attendanceRecordsRepository.findByStudent(studentId),
@@ -108,23 +121,42 @@ export class AttendanceService {
 
     const recordBySession = new Map(records.map((r) => [r.classSessionId, r]));
     const now = new Date();
+    // Date(Date.UTC(year, month, 0)) rolls back to the last day of `month` (1-indexed) — a
+    // one-line "days in this month" that already accounts for leap years.
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
 
-    return sessions
-      .filter(
-        (session) => recordBySession.has(session.id) || session.endsAt < now,
-      )
-      .map((session) => {
-        const record = recordBySession.get(session.id);
-        return {
-          classSessionId: session.id,
-          classId: session.classId,
-          startsAt: session.startsAt,
-          endsAt: session.endsAt,
-          status: record?.status ?? AttendanceStatus.Absent,
-          checkedInAt: record?.checkedInAt ?? null,
-        };
-      })
-      .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime());
+    const days: DayAttendance[] = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const daySessions = sessions.filter(
+        (session) =>
+          session.startsAt.getUTCFullYear() === year &&
+          session.startsAt.getUTCMonth() === month - 1 &&
+          session.startsAt.getUTCDate() === day,
+      );
+
+      const dayRecords = daySessions
+        .filter(
+          (session) => recordBySession.has(session.id) || session.endsAt < now,
+        )
+        .map((session) => {
+          const record = recordBySession.get(session.id);
+          return {
+            classSessionId: session.id,
+            classId: session.classId,
+            startsAt: session.startsAt,
+            endsAt: session.endsAt,
+            status: record?.status ?? AttendanceStatus.Absent,
+            checkedInAt: record?.checkedInAt ?? null,
+          };
+        });
+
+      days.push({
+        date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        records: dayRecords,
+      });
+    }
+
+    return days;
   }
 
   // Every enrolled student, with 'absent' filled in for anyone missing an attendance record.

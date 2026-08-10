@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -17,7 +18,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { UserRole } from '@attendance/shared';
 import { AttendanceService } from '../services/attendance/attendance.service';
 import { successResponse } from '../common/utils/response-factory';
-import { CheckInRequest } from '../dtos/attendance.dto';
+import { AttendanceHistoryQuery, CheckInRequest } from '../dtos/attendance.dto';
 import { SessionAuthGuard } from '../common/guards/session-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -52,9 +53,14 @@ export class AttendanceController {
 
   @Get('me')
   @MyAttendanceDocs()
-  async myAttendance(@Req() request: Request) {
+  async myAttendance(
+    @Req() request: Request,
+    @Query() query: AttendanceHistoryQuery,
+  ) {
     const history = await this.attendanceService.historyForStudent(
       request.currentUserId!,
+      query.month,
+      query.year,
     );
     return successResponse(history);
   }

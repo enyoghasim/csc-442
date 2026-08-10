@@ -7,13 +7,14 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { errorExample } from '../utils/api-docs.util';
 import { successResponse } from '../utils/response-factory';
 import {
-  ATTENDANCE_HISTORY_EXAMPLE,
+  ATTENDANCE_HISTORY_DAY_EXAMPLE,
   CLASS_SUMMARY_EXAMPLE,
   SESSION_ROSTER_EXAMPLE,
 } from './examples';
@@ -64,9 +65,27 @@ export function CheckInDocs() {
 export function MyAttendanceDocs() {
   return applyDecorators(
     ApiCookieAuth('connect.sid'),
-    ApiOperation({ summary: "The current student's own attendance history" }),
+    ApiOperation({
+      summary:
+        "The current student's own attendance history for one calendar month",
+      description:
+        'One entry per day of the given month (dense — every day, not just days with a ' +
+        "session), so the client can fetch a month at a time as the calendar's visible month " +
+        "changes rather than paging through the student's entire history.",
+    }),
+    ApiQuery({ name: 'month', example: 8, description: '1-12' }),
+    ApiQuery({ name: 'year', example: 2026 }),
     ApiOkResponse({
-      schema: { example: successResponse([ATTENDANCE_HISTORY_EXAMPLE]) },
+      schema: { example: successResponse([ATTENDANCE_HISTORY_DAY_EXAMPLE]) },
+    }),
+    ApiBadRequestResponse({
+      description: 'month/year missing or out of range.',
+      schema: {
+        example: errorExample(400, [
+          'month must not be greater than 12',
+          'year must not be less than 2000',
+        ]),
+      },
     }),
     ApiUnauthorizedResponse({
       schema: { example: errorExample(401, 'Not authenticated') },

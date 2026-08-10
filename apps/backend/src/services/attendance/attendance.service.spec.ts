@@ -195,7 +195,7 @@ describe('AttendanceService', () => {
       updatedAt: now,
     };
 
-    it('synthesizes absent for a past session with no record, omits a future one', async () => {
+    it('returns one dense entry per day of the month, absent for a past session with no record, empty for a future one', async () => {
       classSessionsRepository.findByStudent.mockResolvedValue([
         activeSession,
         pastSession,
@@ -210,9 +210,12 @@ describe('AttendanceService', () => {
         },
       ]);
 
-      const result = await service.historyForStudent(studentId);
+      // `now` is fixed to 2026-08-12T10:00:00.000Z (see the top-level beforeEach).
+      const result = await service.historyForStudent(studentId, 8, 2026);
 
-      expect(result).toEqual([
+      expect(result).toHaveLength(31); // August has 31 days — dense, every day gets an entry.
+
+      expect(result.find((d) => d.date === '2026-08-12')?.records).toEqual([
         {
           classSessionId: activeSession.id,
           classId: activeSession.classId,
@@ -221,6 +224,8 @@ describe('AttendanceService', () => {
           status: 'present',
           checkedInAt: now,
         },
+      ]);
+      expect(result.find((d) => d.date === '2026-08-11')?.records).toEqual([
         {
           classSessionId: pastSession.id,
           classId: pastSession.classId,
@@ -230,10 +235,10 @@ describe('AttendanceService', () => {
           checkedInAt: null,
         },
       ]);
-      // futureSession has no record and hasn't ended yet — must not appear at all.
-      expect(
-        result.find((r) => r.classSessionId === futureSession.id),
-      ).toBeUndefined();
+      // futureSession has no record and hasn't ended yet — its day's records must stay empty.
+      expect(result.find((d) => d.date === '2026-08-13')?.records).toEqual([]);
+      // A day with no session at all is still present in the dense array, just empty.
+      expect(result.find((d) => d.date === '2026-08-01')?.records).toEqual([]);
     });
   });
 
