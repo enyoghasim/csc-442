@@ -42,11 +42,15 @@ src/
   modules/<domain>/            Nest module wiring (controller + service + repositories)
   dtos/                        request/query DTOs (class-validator), one file per domain
   common/
-    guards/                    session-auth.guard.ts — real, see "Authentication" below
+    guards/                    session-auth.guard.ts, roles.guard.ts — both real, see
+                               "Authentication" below
+    decorators/                roles.decorator.ts — @Roles(...roles: UserRole[]), read by
+                               roles.guard.ts via Reflector
     filters/                   http-exception.filter.ts — single global filter
     utils/                     response-factory.ts (successResponse()), serialize-user.ts
                                (toPublicUser() — allow-list, strips passwordHash),
-                               api-docs.util.ts (errorExample(), see "Swagger")
+                               api-docs.util.ts (errorExample(), see "Swagger"), csv.util.ts
+                               (toCsv() — generic header+rows -> CSV string)
     api-docs/                  <domain>.docs.ts — composed @Api*() decorators per route, kept
                                out of the controllers themselves; examples.ts — shared example
                                payloads (see "Swagger")
@@ -99,8 +103,21 @@ end to end.
 - `common/guards/session-auth.guard.ts` throws `UnauthorizedException` if `request.session?.userId`
   is unset; on success it sets `request.currentUserId` (a separate property from `request.session`,
   kept that way so downstream code doesn't have to know it's session-backed). Applied via
-  `@UseGuards(SessionAuthGuard)` on `GET /api/auth/me` and `POST /api/auth/logout`; apply it to any
-  other route that needs a logged-in user.
+  `@UseGuards(SessionAuthGuard)` at the controller level on every domain controller; apply it to
+  any other route that needs a logged-in user.
+- `common/guards/roles.guard.ts` + `common/decorators/roles.decorator.ts` — `@Roles(...roles:
+UserRole[])` marks a route as role-restricted; `RolesGuard` looks the current user's role up
+  **fresh from the DB** on every check (never cached, same reasoning as above — a role change
+  must take effect immediately). Runs after `SessionAuthGuard` (needs `request.currentUserId`
+  already set), applied per-route via `@UseGuards(RolesGuard)` + `@Roles(UserRole.Lecturer)` (or
+  `.Student`) — e.g. `POST /api/classes` is lecturer-only, `POST /api/attendance/check-in` is
+  student-only. A route with `@UseGuards(SessionAuthGuard)` but no `@Roles()` just needs _a_
+  logged-in user, either role. `RolesGuard` needs `UsersRepository` via DI, so any module using it
+  imports `AuthModule` (which exports both `UsersRepository` and `RolesGuard`).
+- `users.role` (Drizzle's `pgEnum` literal union) and `@attendance/shared`'s `UserRole` (a plain
+  `as const` object + type, not a TS `enum` — see that package's `AGENTS.md`) are the same string
+  values but structurally distinct types; comparing them is fine without a cast since both resolve
+  to the same `'student' | 'lecturer'` literal union.
 - Logout destroys the session directly — `request.session.destroy(...)` in `AuthController.logout`,
   no wrapper needed now that there's only one path to a session.
 - Login accepts `{ identifier, password }` — `identifier` is a lecturer's email or a student's
@@ -108,6 +125,40 @@ end to end.
   `user` is `toPublicUser()`'d (passwordHash stripped, allow-list not deny-list — new sensitive
   columns don't leak by default). The session id itself is never in the response body — it only
   ever exists in the `Set-Cookie` header, written straight to Redis by connect-redis.
+
+## Domains — classes, class-sessions, attendance
+
+All three are real (Sprint 2/3/4), following the same `Controller → Service → Repository →
+Drizzle` layering as auth. Ownership is checked by service methods (a lecturer can only
+create/update/schedule/see reports for classes they teach), not by the DB — `getOwnedClass`/
+`getOwnedSession`-style private (or, when reused cross-domain, public) helpers throw
+`NotFoundException`/`ForbiddenException` before touching the write path.
+
+- **`classes`** (`controllers/classes.controller.ts`) — `POST/GET /api/classes` (create is
+  lecturer-only, list is role-aware: lecturers get classes they teach, students get classes
+  they're enrolled in via a join), `PATCH /api/classes/:id`, `POST /api/classes/:id/enrollments`
+  (enroll a student by regNumber). A duplicate class `code` or duplicate enrollment returns a
+  clean `409` — `database/database.types.ts`'s `isUniqueViolation()` catches the Postgres unique-
+  constraint error rather than letting it fall through to the global filter's generic `500`.
+- **`class-sessions`** (`controllers/sessions.controller.ts`, route path `/api/sessions`) —
+  `POST/GET /api/sessions` (schedule is lecturer-only, must own the class; list is role-aware
+  same as classes), `GET /api/sessions/:id/qr-token` (lecturer-only, only while the session is
+  inside its `[startsAt, endsAt]` window — issues a fresh random token into Redis via
+  `config/redis-keys.ts`'s `qrTokenKey`/`QR_TOKEN_TTL_SECONDS` every call, overwriting whatever
+  was there; there's no separate "fetch without rotating"). `ClassSessionsService.getOwnedSession`
+  is public and reused by `AttendanceService`'s session-roster endpoint.
+- **`attendance`** (`controllers/attendance.controller.ts`) — `POST /api/attendance/check-in`
+  (student-only, rate-limited 5/min/IP via `@nestjs/throttler`'s `ThrottlerGuard`, configured in
+  `modules/attendance/attendance.module.ts`; validates the session window, the student's
+  enrollment, and the token against Redis, in that order, before writing an attendance record —
+  duplicate check-in is a `409` via the same `isUniqueViolation()` path), `GET /api/attendance/me`
+  (student's own history, joined with its session's start/end), `GET
+/api/attendance/sessions/:sessionId` (lecturer-only roster — every enrolled student, `'absent'`
+  filled in for anyone with no record for that session), `GET
+/api/attendance/classes/:classId/summary` (lecturer-only, sessions-present / total-sessions
+  percentage per student) and `.../summary/export` (same data as CSV via `common/utils/csv.util.ts`'s
+  `toCsv()`, bypasses `successResponse()` on purpose via `@Res()` — it's a file download, not a
+  JSON envelope).
 
 ## Response envelope
 
@@ -144,8 +195,9 @@ project's actual `HttpExceptionFilter` envelope (`{ success: false, error: { sta
 
 ## Out of scope still
 
-Login/logout/me and the `users` table are real (see "Authentication" above). Everything else
-per the root `TASKS.md` is still ahead: `classes`/`enrollments`/`class_sessions`/
-`attendance_records` are still id/createdAt/updatedAt stubs with no real columns, no role guard
-distinguishing student vs lecturer routes yet (the guard checks _authenticated_, not _authorized
-for this role_), no rate limiting, no QR token generation.
+Auth, the full schema, and the classes/class-sessions/attendance domains are all real now (see
+"Authentication" and "Domains" above). Per the root `TASKS.md`, what's left here is Sprint 5:
+integration tests (login/session/attendance flows against a real DB, not the mocked-repository
+unit tests that already exist per-service) and a manual QA pass covering expired-session edge
+cases end to end with the dashboard/mobile clients once those exist. Everything else outstanding
+in `TASKS.md` is dashboard/mobile UI work, out of this app's scope.
