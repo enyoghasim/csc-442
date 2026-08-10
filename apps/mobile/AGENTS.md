@@ -24,7 +24,7 @@ src/
       (tabs)/                 Bottom-tab screens: index (Home), attendance (My Attendance), settings
       scanner.tsx              Non-tab route (modal), reachable from Home's "Scan QR" button
   modules/                  All business/domain logic. Route files import FROM here — never the reverse.
-    <domain>/                auth, attendance, classes, shared
+    <domain>/                auth, attendance, classes, sessions, shared
       components/           Domain-specific UI components (not routes)
       services/               API layer: <domain>.endpoints.ts, <domain>.query.ts,
                                <domain>.mutation.ts (see "Auth module" below for the pattern)
@@ -173,10 +173,22 @@ as const` object. Note the `/api` prefix — matches the backend's global prefix
 - Absolute route pushes must include the full group path — `router.push('/(auth)/login')`,
   `router.push('/(app)/scanner')` — not the old flat `/login`/`/scanner`.
 
-## Not wired yet (Sprint 3)
+## Wired in Sprint 2/3/4
 
-`expo-camera` is installed but `modules/attendance/components/scanner-screen.tsx` has no scanning
-logic — placeholder UI only, reachable via the Home tab's "Scan QR" button → `src/app/(app)/scanner.tsx`.
+`modules/classes/` and `modules/sessions/` (new domains, same shape as `modules/auth/`) back the
+Home tab's "today's classes" list (`GET /api/classes` joined client-side with `GET /api/sessions`,
+filtered/sorted to sessions whose `startsAt` falls today). `modules/attendance/components/scanner-screen.tsx`
+uses real `expo-camera` (`CameraView` + `onBarcodeScanned`, `barcodeScannerSettings={{
+barcodeTypes: ['qr'] }}`, `useCameraPermissions`) — scans are `JSON.parse`'d into `{
+classSessionId, token }` per the dashboard/mobile QR payload contract and posted via
+`useCheckInMutation` (`modules/attendance/services/attendance.mutation.ts`). Malformed scans and
+every documented check-in error (400/403/404/409/429) surface through the existing
+`ErrorMessage` component; the 429 throttler message is remapped to friendlier copy in
+`scanner-screen.tsx` since the backend's raw `ThrottlerException: Too Many Requests` isn't
+end-user wording. `modules/attendance/components/attendance-calendar-screen.tsx` wires
+`useMyAttendanceQuery` (`GET /api/attendance/me`) into `markedDates` (green dot for
+present/late days, red for all-absent days) and the day-tap modal (real class name + status +
+check-in time, joined with `GET /api/classes` client-side).
 
 ## Testing
 

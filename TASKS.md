@@ -48,7 +48,7 @@
 - [ ] Dashboard: create/edit/list classes
 - [ ] Dashboard: enroll students into a class
 - [ ] Dashboard: schedule a class session (date/start/end)
-- [ ] Mobile Home tab: show today's real class/session info
+- [x] Mobile Home tab: show today's real class/session info
 
 ## Sprint 3 — QR Check-in
 
@@ -64,11 +64,11 @@
 - [x] Rate limiting on check-in endpoint — `@nestjs/throttler`, 5 requests/min per IP
       (`ThrottlerModule.forRoot` in `modules/attendance/attendance.module.ts`)
 - [ ] Dashboard: live QR display on session page, auto-refreshing
-- [ ] Mobile: wire expo-camera QR scanner to check-in endpoint
+- [x] Mobile: wire expo-camera QR scanner to check-in endpoint
 
 ## Sprint 4 — History & Reports
 
-- [ ] Mobile My Attendance tab: wire calendar to real attendance data, tap-day detail view
+- [x] Mobile My Attendance tab: wire calendar to real attendance data, tap-day detail view
 - [x] Backend: attendance report per class session/class — `GET /api/attendance/sessions/:id`
       (per-session roster, every enrolled student, 'absent' filled in for anyone with no
       record) and `GET /api/attendance/classes/:id/summary` (per-student sessions-present /
