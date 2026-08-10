@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { api } from '../../shared/lib/api';
 import { ApiError, handleApiError, validateApiResponse } from '../../shared/lib/util';
-import type { ApiResponse } from '../../shared/types/api';
+import type { ApiResponse } from '@attendance/shared';
 import { buildMutationOptions, queryClient } from '../../shared/services/query-client';
 import { userKeys } from '../../shared/services/query-keys';
 import { AUTH_ENDPOINTS } from './auth.endpoints';

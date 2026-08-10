@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../shared/lib/api';
-import type { ApiResponse } from '../../shared/types/api';
+import type { ApiResponse } from '@attendance/shared';
 import { userKeys } from '../../shared/services/query-keys';
 import type { User } from '../types';
 import { AUTH_ENDPOINTS } from './auth.endpoints';

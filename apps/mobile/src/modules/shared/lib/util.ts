@@ -1,7 +1,7 @@
 import { AxiosError } from 'axios';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { ApiResponse } from '../types/api';
+import type { ApiResponse } from '@attendance/shared';
 
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
