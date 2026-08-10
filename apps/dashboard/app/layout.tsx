@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
-import { Sidebar } from '@/components/layout/sidebar';
+import { Toaster } from '@/components/ui/sonner';
+import { AppShell } from '@/modules/shared/components/app-shell';
+import { QueryProvider } from '@/modules/shared/components/query-provider';
 
 // Same family used by apps/mobile (assets/fonts/GoogleSans-*.ttf) — keep both copies in sync.
 const googleSans = localFont({
@@ -29,9 +31,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en" className={`${googleSans.variable} dark h-full antialiased`}>
-      <body className="flex min-h-full">
-        <Sidebar />
-        <main className="flex-1 p-6">{children}</main>
+      <body className="min-h-full">
+        <QueryProvider>
+          <AppShell>{children}</AppShell>
+          <Toaster />
+        </QueryProvider>
       </body>
     </html>
   );

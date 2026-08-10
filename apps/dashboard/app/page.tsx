@@ -7,7 +7,7 @@ export default function Home() {
         <CardTitle>Attendance Tracker — Lecturer Dashboard</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground">Use the sidebar to navigate to Login, Classes, Sessions, or Reports.</p>
+        <p className="text-sm text-muted-foreground">Use the sidebar to navigate to Classes, Sessions, or Reports.</p>
       </CardContent>
     </Card>
   );

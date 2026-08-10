@@ -33,7 +33,8 @@
       `common/decorators/roles.decorator.ts`), looks up role fresh from the DB per request;
       exported from `AuthModule` for Sprint 2 domain modules to consume once they have real
       routes to restrict
-- [ ] Dashboard: login page wired to API (credentialed fetch) — still a static placeholder form
+- [x] Dashboard: login page wired to API (`modules/auth/`, react-hook-form + zod, axios
+      `withCredentials: true` — see `apps/dashboard/AGENTS.md`)
 - [x] Mobile: login screen wired to API (react-hook-form + zod, matches the reference app's form
       pattern), session id stored via expo-secure-store, attached to future requests via
       `api.ts`'s interceptor
@@ -45,9 +46,12 @@
       enrolled in), `PATCH /api/classes/:id` (lecturer must own the class),
       `POST /api/classes/:id/enrollments` (enroll a student by regNumber); duplicate class code
       and duplicate enrollment both return a clean 409, not a raw DB error
-- [ ] Dashboard: create/edit/list classes
-- [ ] Dashboard: enroll students into a class
-- [ ] Dashboard: schedule a class session (date/start/end)
+- [x] Dashboard: create/list classes (`app/classes/page.tsx` — edit not built, only create/list
+      per the brief; `PATCH /api/classes/:id` is wired server-side but has no dashboard UI yet)
+- [x] Dashboard: enroll students into a class (`modules/classes/components/enroll-student-dialog.tsx`,
+      surfaces 404/409 from the API)
+- [x] Dashboard: schedule a class session (date/start/end) (`modules/sessions/components/schedule-session-dialog.tsx`,
+      `endsAt > startsAt` validated client-side via zod `.refine`, matching the backend's own check)
 - [x] Mobile Home tab: show today's real class/session info
 
 ## Sprint 3 — QR Check-in
@@ -63,7 +67,10 @@
       record; duplicate check-in returns 409, not a raw DB error
 - [x] Rate limiting on check-in endpoint — `@nestjs/throttler`, 5 requests/min per IP
       (`ThrottlerModule.forRoot` in `modules/attendance/attendance.module.ts`)
-- [ ] Dashboard: live QR display on session page, auto-refreshing
+- [x] Dashboard: live QR display on session page, auto-refreshing (`app/sessions/[id]/page.tsx`,
+      `modules/sessions/components/qr-display.tsx` — polls `GET /api/sessions/:id/qr-token` every
+      60s via `useQrTokenQuery`'s `refetchInterval`, comfortably under the ~90s Redis TTL; roster
+      below it also auto-refreshes on a 15s interval)
 - [x] Mobile: wire expo-camera QR scanner to check-in endpoint
 
 ## Sprint 4 — History & Reports
@@ -74,9 +81,14 @@
       record) and `GET /api/attendance/classes/:id/summary` (per-student sessions-present /
       total-sessions percentage across the whole class); `GET /api/attendance/me` is the
       student-facing equivalent (own history, joined with session start/end)
-- [ ] Dashboard: attendance report per class session/class (%, present/absent list) — UI
+- [x] Dashboard: attendance report per class session/class (%, present/absent list) — UI
+      (`app/reports/page.tsx`, class picker + `modules/attendance/components/class-summary-table.tsx`;
+      the per-session roster/present-absent list lives on `app/sessions/[id]/page.tsx` instead,
+      next to the QR display it's read alongside)
 - [x] Backend: CSV export endpoint — `GET /api/attendance/classes/:id/summary/export`
-- [ ] Dashboard: export button — UI
+- [x] Dashboard: export button — UI (`modules/attendance/components/export-summary-link.tsx`,
+      plain `<a href download>` top-level navigation, not fetch+blob — see that app's AGENTS.md
+      "Session / CORS")
 
 ## Sprint 5 — Testing & Report
 
@@ -88,6 +100,13 @@
 - [x] Manual QA pass (backend): exercised expired/inactive QR window, wrong token, duplicate
       check-in, unenrolled student, wrong-role rejection, and rate-limit-exceeded against the
       running dev server + Postgres/Redis — see commit history for the full pass
-- [ ] Manual QA pass (dashboard/mobile): expired session, duplicate scan, wrong class edge cases
+- [ ] Manual QA pass (dashboard/mobile): expired session, duplicate scan, wrong class edge cases —
+      dashboard's data flow was exercised end-to-end via curl against the live backend (login,
+      create class, duplicate class code 409, enroll student, 404/409 enrollment errors, schedule
+      session, `endsAt<=startsAt` 400, QR token issuance + rotation, a real student check-in with
+      the exact `JSON.stringify({classSessionId, token})` payload the dashboard renders, roster
+      and summary reflecting it, CSV export) plus `pnpm build`/`typecheck`/`lint` all clean, but
+      NOT a browser click-through of the dialogs/forms themselves — no browser automation tool
+      was available in the environment this was built in. Mobile-side QA is separate agent's scope.
 - [ ] Technical report draft
 - [ ] Final polish + demo prep
