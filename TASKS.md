@@ -75,7 +75,10 @@
 
 ## Sprint 4 — History & Reports
 
-- [x] Mobile My Attendance tab: wire calendar to real attendance data, tap-day detail view
+- [x] Mobile My Attendance tab: wire calendar to real attendance data, tap-day detail view —
+      fetches one month at a time (`GET /api/attendance/me?month=&year=`, dense per-day
+      response), refetching via the `Calendar`'s `onMonthChange` as the lecturer/student
+      navigates months rather than loading the whole history up front
 - [x] Backend: attendance report per class session/class — `GET /api/attendance/sessions/:id`
       (per-session roster, every enrolled student, 'absent' filled in for anyone with no
       record) and `GET /api/attendance/classes/:id/summary` (per-student sessions-present /
