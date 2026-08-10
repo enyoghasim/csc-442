@@ -11,8 +11,10 @@
 
 ## Sprint 1 — Auth + Schema (session-based, seeded accounts, no JWT)
 
-- [ ] Define full Drizzle schema (`users` has real columns now — role, name, email, regNumber,
-      passwordHash; `classes`/`enrollments`/`classSessions`/`attendance_records` still stubs)
+- [x] Define full Drizzle schema — `classes` (name, code, lecturerId), `enrollments`
+      (studentId, classId, unique pair), `classSessions` (classId, startsAt/endsAt check-in
+      window), `attendanceRecords` (classSessionId, studentId, status, checkedInAt, unique
+      per session/student); migration `0002_concerned_sister_grimm.sql` applied
 - [x] Run first migration
 - [x] Seed script: `apps/backend/src/database/seed/seed.ts` — reads `data/students.json`
       (name+regNumber, extracted from the CSC 422 class list), inserts one lecturer + 188
