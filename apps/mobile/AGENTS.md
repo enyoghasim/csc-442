@@ -169,7 +169,7 @@ as const` object. Note the `/api` prefix — matches the backend's global prefix
 
 - **`(auth)`** — unauthenticated screens (currently just `login`). Redirects to `/(app)/(tabs)` if
   `useCurrentUserQuery` already has a user.
-- **`(app)`** — authenticated screens (`(tabs)` + `scanner`). Redirects to `/(auth)/login` if
+- **`(app)`** — authenticated screens (`(tabs)` + `scanner` + `attendance-day/[date]`). Redirects to `/(auth)/login` if
   `useCurrentUserQuery` has no user. Both gates return `null` while the query is loading (no
   flash-of-wrong-screen) rather than rendering either branch early.
 - Absolute route pushes must include the full group path — `router.push('/(auth)/login')`,
@@ -202,15 +202,33 @@ session, or one the student missed, is left blank rather than flagged red, so a 
 independently via the query key, so navigating months fetches once per new month and re-uses the
 cache when flipping back, same pattern as a billboard-availability-style month endpoint. The
 initial month is today's _UTC_ month/year, to agree with the backend's UTC day-bucketing.
+
+**The `Calendar` is always mounted and its displayed month is always driven by a `current` prop
+(`'yyyy-MM-01'` built from `visibleMonth`)** — both are load-bearing, not just one. The original
+version conditionally replaced `<Calendar>` with an `<ActivityIndicator>` while `isLoading` was
+true; since every new `{month, year}` query key is `isLoading: true` on its first fetch, that
+swap unmounted and remounted the Calendar on _every_ navigation to an uncached month (either
+direction, most reproducible going back) — losing react-native-calendars' own internal
+displayed-month tracking and defaulting back to today's month (August, in this environment) on
+remount. Fixed by never unmounting it (a small `isFetching`-driven spinner sits next to the title
+instead) and by pinning `current` so even a future remount can't silently drift from
+`visibleMonth` again.
+
 Tapping any day — dotted or not — pushes `/(app)/attendance-day/<yyyy-MM-dd>`
-(`src/app/(app)/attendance-day/[date].tsx`, registered in `(app)/_layout.tsx`'s `Stack` with
-`headerShown: true` since the group default is `false`) rather than opening a modal — a real
-screen with a native back button, showing every record for that date via
+(`src/app/(app)/attendance-day/[date].tsx`) rather than opening a modal — a real screen with a
+native back button, showing every record for that date via
 `modules/attendance/components/attendance-day-screen.tsx`, which calls the same
 `useMyAttendanceQuery(month, year)` for that date's month and reads its `records` straight out of
-react-query's cache (no extra request if the calendar's already loaded that month).
+react-query's cache (no extra request if the calendar's already loaded that month). The screen's
+own `<Stack.Screen options={{ title: formatHeaderDate(date) }} />` sets the native header to the
+actual date being viewed (e.g. "Aug 10, 2026" — never a bare numeric date like "10/08/26", which
+reads as ambiguous DD/MM/YY vs MM/DD/YY) instead of a generic "Attendance" label, so there's no
+separate in-body heading duplicating it. `(app)/_layout.tsx`'s registration for this route sets
+`headerBackTitle: ''` — without it, the back button falls back to the _previous_ screen's route
+name, `"(tabs)"`, which is not a string a user should ever see.
+
 `modules/attendance/lib/status.ts` centralizes `statusLabels`/`statusTextClasses`/`formatTime`/
-`formatDateHeading` so the calendar and day-detail screens don't drift on wording/color.
+`formatHeaderDate` so the calendar and day-detail screens don't drift on wording/color.
 
 ## Testing
 

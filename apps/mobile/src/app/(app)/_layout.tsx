@@ -21,7 +21,12 @@ export default function AppLayout() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: true, title: 'Scan QR' }} />
-      <Stack.Screen name="attendance-day/[date]" options={{ headerShown: true, title: 'Attendance' }} />
+      {/* No static title here — attendance-day-screen.tsx sets it per-instance (the date being
+          viewed) via its own nested <Stack.Screen options={...}>. headerBackTitle is set here
+          since it doesn't vary: without it, the back button falls back to the PREVIOUS screen's
+          route name — "(tabs)", since that Stack.Screen above has no title of its own — which is
+          not a string a user should ever see. */}
+      <Stack.Screen name="attendance-day/[date]" options={{ headerShown: true, headerBackTitle: '' }} />
     </Stack>
   );
 }

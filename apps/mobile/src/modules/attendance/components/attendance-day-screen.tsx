@@ -1,9 +1,10 @@
+import { Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useClassesQuery } from '../../classes/services/classes.query';
 import { ThemedText } from '../../shared/components/themed-text';
 import { useMyAttendanceQuery } from '../services/attendance.query';
-import { formatDateHeading, formatTime, statusLabels, statusTextClasses } from '../lib/status';
+import { formatHeaderDate, formatTime, statusLabels, statusTextClasses } from '../lib/status';
 
 // Reachable by tapping a day on the calendar (attendance-calendar-screen.tsx pushes
 // /(app)/attendance-day/<yyyy-MM-dd>) — shows everything the student scanned that day. Refetches
@@ -19,16 +20,17 @@ export const AttendanceDayScreen = ({ date }: { date: string }) => {
 
   return (
     <SafeAreaView edges={['bottom']} className="flex-1 bg-black p-4">
-      <ThemedText variant="title" className="mb-4">
-        {formatDateHeading(date)}
-      </ThemedText>
+      {/* Overrides (app)/_layout.tsx's static Stack.Screen options for this route — the header
+          shows the actual date being viewed instead of a generic "Attendance" label, so there's
+          no need for a second, redundant heading in the body below it. */}
+      <Stack.Screen options={{ title: formatHeaderDate(date) }} />
 
       {isLoading ? (
         <ActivityIndicator color="#3b82f6" className="mt-8" />
       ) : records.length === 0 ? (
-        <ThemedText className="text-zinc-500">No attendance record for this date.</ThemedText>
+        <ThemedText className="mt-4 text-zinc-500">No attendance record for this date.</ThemedText>
       ) : (
-        <View className="gap-4">
+        <View className="mt-4 gap-4">
           {records.map((record) => (
             <View key={record.classSessionId} className="rounded-xl border border-zinc-800 p-4">
               <ThemedText variant="lg" weight="semibold">
