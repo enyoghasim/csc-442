@@ -50,8 +50,8 @@ export function ScanFrameOverlay() {
         <View style={{ width: (width - FRAME_SIZE) / 2, backgroundColor: SCRIM }} />
       </View>
 
-      <View style={{ flex: 1, backgroundColor: SCRIM, alignItems: 'center' }}>
-        <ThemedText variant="md" weight="medium" className="mt-6 text-center text-white">
+      <View style={{ flex: 1, backgroundColor: SCRIM, alignItems: 'center', justifyContent: 'center' }}>
+        <ThemedText variant="md" weight="medium" className="px-8 text-center text-white">
           Align the QR code within the frame
         </ThemedText>
       </View>
