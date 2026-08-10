@@ -17,10 +17,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    // HttpException#getResponse() returns the raw body Nest built for the exception — for
+    // `new XException('a string')` that's `{ statusCode, message, error }`, not just the
+    // string, so unwrap `.message` (also covers ValidationPipe's `message: string[]`) rather
+    // than nesting that whole object under our own `error.message`.
+    const exceptionResponse =
+      exception instanceof HttpException ? exception.getResponse() : undefined;
     const message =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : 'Internal server error';
+      typeof exceptionResponse === 'string'
+        ? exceptionResponse
+        : exceptionResponse &&
+            typeof exceptionResponse === 'object' &&
+            'message' in exceptionResponse
+          ? exceptionResponse.message
+          : 'Internal server error';
 
     response.status(status).json({
       success: false,
