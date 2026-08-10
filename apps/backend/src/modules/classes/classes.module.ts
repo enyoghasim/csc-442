@@ -3,8 +3,12 @@ import { ClassesController } from '../../controllers/classes.controller';
 import { ClassesService } from '../../services/classes/classes.service';
 import { ClassesRepository } from '../../repositories/classes/classes.repository';
 import { EnrollmentsRepository } from '../../repositories/enrollments/enrollments.repository';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
+  // AuthModule exports UsersRepository (needed by ClassesService's role lookup) and RolesGuard
+  // (needed by @UseGuards(RolesGuard) in ClassesController).
+  imports: [AuthModule],
   controllers: [ClassesController],
   providers: [ClassesService, ClassesRepository, EnrollmentsRepository],
 })

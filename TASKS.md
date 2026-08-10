@@ -40,6 +40,11 @@
 
 ## Sprint 2 — Classes & Sessions
 
+- [x] Backend: classes API — `POST/GET /api/classes` (create is lecturer-only via `RolesGuard`,
+      list is role-aware: lecturers get classes they teach, students get classes they're
+      enrolled in), `PATCH /api/classes/:id` (lecturer must own the class),
+      `POST /api/classes/:id/enrollments` (enroll a student by regNumber); duplicate class code
+      and duplicate enrollment both return a clean 409, not a raw DB error
 - [ ] Dashboard: create/edit/list classes
 - [ ] Dashboard: enroll students into a class
 - [ ] Dashboard: schedule a class session (date/start/end)
