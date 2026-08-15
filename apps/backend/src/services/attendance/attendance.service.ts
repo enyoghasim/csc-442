@@ -50,6 +50,29 @@ export interface ClassAttendanceSummaryEntry {
   percentage: number;
 }
 
+export interface ClassAttendanceMatrixSession {
+  id: string;
+  startsAt: Date;
+  endsAt: Date;
+}
+
+export interface ClassAttendanceMatrixRow {
+  studentId: string;
+  name: string;
+  regNumber: string | null;
+  // Keyed by classSessionId. A session that hasn't ended yet has no key at all — same
+  // don't-mark-it-absent-early reasoning as historyForStudent below.
+  statuses: Record<string, AttendanceStatus | 'absent'>;
+  sessionsPresent: number;
+  totalSessions: number;
+  percentage: number;
+}
+
+export interface ClassAttendanceMatrix {
+  sessions: ClassAttendanceMatrixSession[];
+  rows: ClassAttendanceMatrixRow[];
+}
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -242,6 +265,105 @@ export class AttendanceService {
         s.sessionsPresent,
         s.totalSessions,
         `${s.percentage}%`,
+      ]),
+    );
+  }
+
+  // Wide student-by-session grid for a class — every enrolled student as a row, every session
+  // (optionally narrowed to `sessionIds`) as a column, so a lecturer can see *which* sessions a
+  // student missed, not just how many, in one view. `sessionIds` lets the caller export/view only
+  // a chosen subset instead of a class's entire history; a single-element array degenerates this
+  // into a one-session roster.
+  async classMatrix(
+    lecturerId: string,
+    classId: string,
+    sessionIds?: string[],
+  ): Promise<ClassAttendanceMatrix> {
+    const klass = await this.classesRepository.findById(classId);
+    if (!klass) throw new NotFoundException('Class not found');
+    if (klass.lecturerId !== lecturerId) {
+      throw new ForbiddenException("You don't own this class");
+    }
+
+    const [roster, allSessions, records] = await Promise.all([
+      this.enrollmentsRepository.findByClassWithStudents(classId),
+      this.classSessionsRepository.findByClassId(classId),
+      this.attendanceRecordsRepository.findByClass(classId),
+    ]);
+
+    const wanted = sessionIds ? new Set(sessionIds) : null;
+    const sessions = allSessions
+      .filter((session) => !wanted || wanted.has(session.id))
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+    const sessionIdSet = new Set(sessions.map((session) => session.id));
+
+    const recordByKey = new Map(
+      records
+        .filter((record) => sessionIdSet.has(record.classSessionId))
+        .map((record) => [
+          `${record.classSessionId}:${record.studentId}`,
+          record,
+        ]),
+    );
+
+    const now = new Date();
+    const rows = roster.map((student) => {
+      const statuses: Record<string, AttendanceStatus | 'absent'> = {};
+      let sessionsPresent = 0;
+      let totalSessions = 0;
+
+      for (const session of sessions) {
+        const record = recordByKey.get(`${session.id}:${student.studentId}`);
+        if (record) {
+          statuses[session.id] = record.status;
+          totalSessions++;
+          if (record.status === 'present' || record.status === 'late') {
+            sessionsPresent++;
+          }
+        } else if (session.endsAt < now) {
+          statuses[session.id] = 'absent';
+          totalSessions++;
+        }
+      }
+
+      const percentage =
+        totalSessions === 0
+          ? 0
+          : Math.round((sessionsPresent / totalSessions) * 1000) / 10;
+
+      return {
+        studentId: student.studentId,
+        name: student.name,
+        regNumber: student.regNumber,
+        statuses,
+        sessionsPresent,
+        totalSessions,
+        percentage,
+      };
+    });
+
+    return { sessions, rows };
+  }
+
+  async classMatrixCsv(
+    lecturerId: string,
+    classId: string,
+    sessionIds?: string[],
+  ): Promise<string> {
+    const matrix = await this.classMatrix(lecturerId, classId, sessionIds);
+    const sessionLabel = (session: ClassAttendanceMatrixSession) =>
+      session.startsAt.toISOString().slice(0, 16).replace('T', ' ');
+
+    return toCsv(
+      ['Name', 'RegNumber', ...matrix.sessions.map(sessionLabel), 'Percentage'],
+      matrix.rows.map((row) => [
+        row.name,
+        row.regNumber ?? '',
+        ...matrix.sessions.map((session) => {
+          const status = row.statuses[session.id];
+          return status ? status.charAt(0).toUpperCase() + status.slice(1) : '';
+        }),
+        `${row.percentage}%`,
       ]),
     );
   }

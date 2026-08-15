@@ -88,6 +88,28 @@ export class ClassSessionsService {
     };
   }
 
+  // Ends a live session early — pulls `endsAt` back to now instead of waiting for its scheduled
+  // end, and immediately drops the Redis QR token so a screenshot/photo of the last-displayed
+  // code stops working the moment the lecturer ends the session, not up to 39s later.
+  async endSession(
+    lecturerId: string,
+    sessionId: string,
+  ): Promise<ClassSession> {
+    const session = await this.getOwnedSession(lecturerId, sessionId);
+
+    const now = new Date();
+    if (now < session.startsAt || now > session.endsAt) {
+      throw new BadRequestException('Session is not currently active');
+    }
+
+    const updated = await this.classSessionsRepository.update(sessionId, {
+      endsAt: now,
+    });
+    await redis.del(qrTokenKey(sessionId));
+
+    return updated!;
+  }
+
   // Exposed for AttendanceService's session-roster endpoint, which needs the same ownership
   // check without duplicating it.
   async getOwnedSession(

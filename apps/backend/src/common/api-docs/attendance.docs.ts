@@ -15,6 +15,7 @@ import { errorExample } from '../utils/api-docs.util';
 import { successResponse } from '../utils/response-factory';
 import {
   ATTENDANCE_HISTORY_DAY_EXAMPLE,
+  CLASS_MATRIX_EXAMPLE,
   CLASS_SUMMARY_EXAMPLE,
   SESSION_ROSTER_EXAMPLE,
 } from './examples';
@@ -123,6 +124,30 @@ export function ClassSummaryDocs() {
     }),
     ApiOkResponse({
       schema: { example: successResponse([CLASS_SUMMARY_EXAMPLE]) },
+    }),
+    ApiForbiddenResponse({
+      schema: { example: errorExample(403, "You don't own this class") },
+    }),
+    ApiNotFoundResponse({
+      schema: { example: errorExample(404, 'Class not found') },
+    }),
+  );
+}
+
+export function ClassMatrixDocs() {
+  return applyDecorators(
+    ApiCookieAuth('connect.sid'),
+    ApiOperation({
+      summary:
+        'Student x session attendance grid for a class, optionally narrowed to chosen sessions (lecturer only)',
+    }),
+    ApiQuery({
+      name: 'sessionIds',
+      required: false,
+      description: 'Comma-separated class-session IDs; omit for every session',
+    }),
+    ApiOkResponse({
+      schema: { example: successResponse(CLASS_MATRIX_EXAMPLE) },
     }),
     ApiForbiddenResponse({
       schema: { example: errorExample(403, "You don't own this class") },

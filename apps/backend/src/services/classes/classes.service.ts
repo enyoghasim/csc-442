@@ -84,6 +84,31 @@ export class ClassesService {
     });
   }
 
+  // Enrolls every seeded student not already in the class — the "Allow everyone" bulk action, an
+  // alternative to enrolling one regNumber at a time via enrollStudent above.
+  async enrollAllStudents(
+    lecturerId: string,
+    classId: string,
+  ): Promise<{ enrolled: number }> {
+    await this.getOwnedClass(lecturerId, classId);
+
+    const [allStudents, roster] = await Promise.all([
+      this.usersRepository.findAllStudents(),
+      this.enrollmentsRepository.findByClassWithStudents(classId),
+    ]);
+
+    const alreadyEnrolled = new Set(roster.map((student) => student.studentId));
+    const toEnroll = allStudents.filter(
+      (student) => !alreadyEnrolled.has(student.id),
+    );
+
+    const inserted = await this.enrollmentsRepository.insertMany(
+      toEnroll.map((student) => ({ studentId: student.id, classId })),
+    );
+
+    return { enrolled: inserted.length };
+  }
+
   private async getOwnedClass(
     lecturerId: string,
     classId: string,

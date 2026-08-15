@@ -46,6 +46,21 @@ export class EnrollmentsRepository {
     return inserted;
   }
 
+  // Bulk "enroll everyone" — `onConflictDoNothing` makes this safe to call with a list that
+  // already includes some enrolled students (e.g. re-running "Enroll all" after a few students
+  // were added individually) rather than requiring the caller to pre-filter.
+  async insertMany(
+    newEnrollments: NewEnrollment[],
+    executor: DbExecutor = this.databaseService.db,
+  ): Promise<Enrollment[]> {
+    if (newEnrollments.length === 0) return [];
+    return executor
+      .insert(enrollments)
+      .values(newEnrollments)
+      .onConflictDoNothing()
+      .returning();
+  }
+
   // The full class roster — used to build attendance reports (every enrolled student, whether
   // or not they have an attendance record for a given session).
   async findByClassWithStudents(

@@ -44,4 +44,12 @@ export class UsersRepository {
     const [inserted] = await executor.insert(users).values(user).returning();
     return inserted;
   }
+
+  // Every seeded student — the pool ClassesService.enrollAllStudents enrolls a class's roster
+  // from.
+  async findAllStudents(
+    executor: DbExecutor = this.databaseService.db,
+  ): Promise<User[]> {
+    return executor.select().from(users).where(eq(users.role, 'student'));
+  }
 }

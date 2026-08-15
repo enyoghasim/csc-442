@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsInt, IsString, IsUUID, Max, Min, MinLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class CheckInRequest {
   @ApiProperty({ description: 'The class session the QR code belongs to' })
@@ -31,4 +39,22 @@ export class AttendanceHistoryQuery {
   @Min(2000)
   @Max(2100)
   year!: number;
+}
+
+// Query params for GET /api/attendance/classes/:classId/matrix(/export) — narrows the matrix to a
+// chosen subset of sessions instead of the class's entire history. Comma-separated in the query
+// string since it's a GET; transformed into a string[] here so the controller/service only ever
+// see the real shape.
+export class ClassMatrixQuery {
+  @ApiProperty({
+    required: false,
+    description:
+      'Comma-separated class-session IDs to include; omit for every session',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.split(',').filter(Boolean) : value,
+  )
+  @IsUUID('4', { each: true })
+  sessionIds?: string[];
 }

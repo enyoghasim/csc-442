@@ -85,3 +85,32 @@ export function GetQrTokenDocs() {
     }),
   );
 }
+
+export function EndSessionDocs() {
+  return applyDecorators(
+    ApiCookieAuth('connect.sid'),
+    ApiOperation({
+      summary: 'End a live session early (lecturer only, must own the class)',
+      description:
+        "Pulls the session's endsAt back to now and immediately drops its Redis QR token, so " +
+        'check-ins stop right away instead of at the originally scheduled end time.',
+    }),
+    ApiOkResponse({
+      schema: { example: successResponse(CLASS_SESSION_EXAMPLE) },
+    }),
+    ApiBadRequestResponse({
+      description: "Session hasn't started yet, or has already ended.",
+      schema: {
+        example: errorExample(400, 'Session is not currently active'),
+      },
+    }),
+    ApiForbiddenResponse({
+      schema: {
+        example: errorExample(403, "You don't own this class session"),
+      },
+    }),
+    ApiNotFoundResponse({
+      schema: { example: errorExample(404, 'Class session not found') },
+    }),
+  );
+}

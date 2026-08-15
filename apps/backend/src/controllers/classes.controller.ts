@@ -26,6 +26,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import {
   CreateClassDocs,
+  EnrollAllStudentsDocs,
   EnrollStudentDocs,
   ListClassesDocs,
   UpdateClassDocs,
@@ -92,5 +93,23 @@ export class ClassesController {
       body.regNumber,
     );
     return successResponse(null);
+  }
+
+  // "Allow everyone" — enrolls every seeded student not already in the class, instead of adding
+  // them one regNumber at a time via the route above.
+  @Post(':id/enrollments/all')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.Lecturer)
+  @EnrollAllStudentsDocs()
+  async enrollAll(
+    @Req() request: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    const result = await this.classesService.enrollAllStudents(
+      request.currentUserId!,
+      id,
+    );
+    return successResponse(result);
   }
 }

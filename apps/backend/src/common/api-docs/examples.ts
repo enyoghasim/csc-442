@@ -70,3 +70,19 @@ export const CLASS_SUMMARY_EXAMPLE = {
   totalSessions: 10,
   percentage: 80,
 };
+
+/** Swagger example of GET /api/attendance/classes/:classId/matrix's response. */
+export const CLASS_MATRIX_EXAMPLE = {
+  sessions: [CLASS_SESSION_EXAMPLE],
+  rows: [
+    {
+      studentId: '3d3f0b8e-2b7a-4a3a-9b1a-8e6f7c2d1a90',
+      name: 'Jane Doe',
+      regNumber: '2019/1/12345CS',
+      statuses: { [CLASS_SESSION_EXAMPLE.id]: 'present' },
+      sessionsPresent: 1,
+      totalSessions: 1,
+      percentage: 100,
+    },
+  ],
+};

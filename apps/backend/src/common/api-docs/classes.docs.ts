@@ -98,3 +98,23 @@ export function EnrollStudentDocs() {
     }),
   );
 }
+
+export function EnrollAllStudentsDocs() {
+  return applyDecorators(
+    ApiCookieAuth('connect.sid'),
+    ApiOperation({
+      summary:
+        'Enroll every seeded student not already in the class (lecturer only)',
+    }),
+    ApiOkResponse({
+      schema: { example: successResponse({ enrolled: 12 }) },
+    }),
+    ApiForbiddenResponse({
+      description: "Not this class's lecturer.",
+      schema: { example: errorExample(403, "You don't own this class") },
+    }),
+    ApiNotFoundResponse({
+      schema: { example: errorExample(404, 'Class not found') },
+    }),
+  );
+}

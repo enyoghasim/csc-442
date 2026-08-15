@@ -65,4 +65,17 @@ export class ClassSessionsRepository {
       .returning();
     return inserted;
   }
+
+  async update(
+    id: string,
+    patch: Partial<Pick<NewClassSession, 'startsAt' | 'endsAt'>>,
+    executor: DbExecutor = this.databaseService.db,
+  ): Promise<ClassSession | undefined> {
+    const [updated] = await executor
+      .update(classSessions)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(classSessions.id, id))
+      .returning();
+    return updated;
+  }
 }

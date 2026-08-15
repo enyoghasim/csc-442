@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -20,6 +21,7 @@ import { SessionAuthGuard } from '../common/guards/session-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import {
+  EndSessionDocs,
   GetQrTokenDocs,
   ListSessionsDocs,
   ScheduleSessionDocs,
@@ -71,5 +73,18 @@ export class SessionsController {
       id,
     );
     return successResponse(token);
+  }
+
+  // Ends a live session early instead of waiting for its scheduled endsAt.
+  @Patch(':id/end')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.Lecturer)
+  @EndSessionDocs()
+  async end(@Req() request: Request, @Param('id', ParseUUIDPipe) id: string) {
+    const session = await this.classSessionsService.endSession(
+      request.currentUserId!,
+      id,
+    );
+    return successResponse(session);
   }
 }

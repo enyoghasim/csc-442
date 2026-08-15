@@ -18,12 +18,17 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { UserRole } from '@attendance/shared';
 import { AttendanceService } from '../services/attendance/attendance.service';
 import { successResponse } from '../common/utils/response-factory';
-import { AttendanceHistoryQuery, CheckInRequest } from '../dtos/attendance.dto';
+import {
+  AttendanceHistoryQuery,
+  CheckInRequest,
+  ClassMatrixQuery,
+} from '../dtos/attendance.dto';
 import { SessionAuthGuard } from '../common/guards/session-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import {
   CheckInDocs,
+  ClassMatrixDocs,
   ClassSummaryDocs,
   MyAttendanceDocs,
   SessionRosterDocs,
@@ -93,6 +98,51 @@ export class AttendanceController {
       classId,
     );
     return successResponse(summary);
+  }
+
+  // Student-by-session grid — every enrolled student x every session (or, via `sessionIds`, a
+  // chosen subset of them). `classSummary` above only ever returns one present/total number per
+  // student; this keeps each session's individual status so the dashboard can render/export the
+  // full matrix, not just the aggregate.
+  @Get('classes/:classId/matrix')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.Lecturer)
+  @ClassMatrixDocs()
+  async classMatrix(
+    @Req() request: Request,
+    @Param('classId', ParseUUIDPipe) classId: string,
+    @Query() query: ClassMatrixQuery,
+  ) {
+    const matrix = await this.attendanceService.classMatrix(
+      request.currentUserId!,
+      classId,
+      query.sessionIds,
+    );
+    return successResponse(matrix);
+  }
+
+  // Same matrix as above, as a CSV download — bypasses successResponse() for the same reason the
+  // summary export does.
+  @Get('classes/:classId/matrix/export')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.Lecturer)
+  async exportClassMatrix(
+    @Req() request: Request,
+    @Param('classId', ParseUUIDPipe) classId: string,
+    @Query() query: ClassMatrixQuery,
+    @Res() response: Response,
+  ) {
+    const csv = await this.attendanceService.classMatrixCsv(
+      request.currentUserId!,
+      classId,
+      query.sessionIds,
+    );
+    response.setHeader('Content-Type', 'text/csv');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="class-${classId}-attendance-matrix.csv"`,
+    );
+    response.send(csv);
   }
 
   // Bypasses the successResponse() envelope on purpose — this is a raw CSV file download, not a
