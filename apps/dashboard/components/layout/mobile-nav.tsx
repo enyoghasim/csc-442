@@ -14,7 +14,7 @@ export const MobileNav = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="flex items-center justify-between border-b p-3 md:hidden">
+    <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background p-3 md:hidden">
       <div className="flex items-center gap-2 px-1">
         <Logo size={24} />
         <span className="text-sm font-semibold">Attendance Tracker</span>

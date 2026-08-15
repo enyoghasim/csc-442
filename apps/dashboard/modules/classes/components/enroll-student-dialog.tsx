@@ -2,22 +2,35 @@
 
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loading03Icon, UserAdd02Icon } from '@hugeicons/core-free-icons';
+import { Loading03Icon, UserAdd02Icon, UserGroupIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { ErrorMessage } from '@/modules/shared/components/error-message';
-import { useEnrollStudentMutation } from '../services/classes.mutation';
+import { useEnrollAllStudentsMutation, useEnrollStudentMutation } from '../services/classes.mutation';
 import { enrollStudentSchema, type EnrollStudentValues } from '../validations/classes';
 import type { Class } from '../types';
 
 export function EnrollStudentDialog({ klass }: { klass: Class }) {
   const [open, setOpen] = useState(false);
   const { mutate: enroll, error, isPending } = useEnrollStudentMutation(klass.id);
+  const { mutate: enrollAll, isPending: isEnrollingAll } = useEnrollAllStudentsMutation(klass.id);
 
   const {
     control,
@@ -34,6 +47,19 @@ export function EnrollStudentDialog({ klass }: { klass: Class }) {
       onSuccess: () => {
         toast.success(`Enrolled ${values.regNumber} in ${klass.code}`);
         reset();
+        setOpen(false);
+      },
+    });
+  };
+
+  const onEnrollAll = () => {
+    enrollAll(undefined, {
+      onSuccess: (result) => {
+        toast.success(
+          result.enrolled > 0
+            ? `Enrolled ${result.enrolled} student(s) in ${klass.code}`
+            : `Everyone was already enrolled in ${klass.code}`,
+        );
         setOpen(false);
       },
     });
@@ -75,6 +101,34 @@ export function EnrollStudentDialog({ klass }: { klass: Class }) {
             </Button>
           </DialogFooter>
         </form>
+
+        <div className="flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs text-muted-foreground">or</span>
+          <Separator className="flex-1" />
+        </div>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" className="w-full" disabled={isEnrollingAll}>
+              <HugeiconsIcon icon={isEnrollingAll ? Loading03Icon : UserGroupIcon} size={16} className={isEnrollingAll ? 'animate-spin' : undefined} />
+              {isEnrollingAll ? 'Enrolling everyone...' : 'Allow everyone'}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Enroll every student?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This adds every seeded student not already enrolled in {klass.name}. Enrollment can&apos;t be removed
+                from the dashboard yet, so there&apos;s no undo for this.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={onEnrollAll}>Enroll everyone</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );

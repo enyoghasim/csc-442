@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useQrTokenQuery } from '../services/sessions.query';
+import { isSessionActive } from '../lib/status';
 import type { ClassSession } from '../types';
 
 // Matches config/redis-keys.ts's QR_TOKEN_TTL_SECONDS relationship — the frontend rotates every
@@ -10,11 +11,6 @@ import type { ClassSession } from '../types';
 const REFRESH_SECONDS = 15;
 const RING_RADIUS = 11;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-
-function isSessionActive(session: ClassSession): boolean {
-  const now = Date.now();
-  return now >= new Date(session.startsAt).getTime() && now <= new Date(session.endsAt).getTime();
-}
 
 // Renders the rotating check-in QR code for a class session. The encoded payload
 // (`JSON.stringify({ classSessionId, token })`) must match apps/mobile's scanner byte-for-byte —

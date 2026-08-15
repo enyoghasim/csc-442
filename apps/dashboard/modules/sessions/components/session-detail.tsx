@@ -1,9 +1,11 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SessionRosterTable } from '@/modules/attendance/components/session-roster-table';
 import { formatDateTime } from '@/modules/shared/lib/util';
+import { EndSessionButton } from './end-session-button';
 import { useSessionsQuery } from '../services/sessions.query';
+import { isSessionActive } from '../lib/status';
 import { QrDisplay } from './qr-display';
 
 // The backend has no GET /api/sessions/:id (only list) — find the session client-side from the
@@ -17,6 +19,11 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
       <Card>
         <CardHeader>
           <CardTitle>{session ? formatDateTime(session.startsAt) : 'Session'}</CardTitle>
+          {session && isSessionActive(session) && (
+            <CardAction>
+              <EndSessionButton sessionId={session.id} />
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent className="flex justify-center">
           {isLoading && <p className="text-sm text-muted-foreground">Loading session...</p>}

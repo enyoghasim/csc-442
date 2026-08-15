@@ -6,30 +6,39 @@ import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { env } from '@/modules/shared/lib/env';
-import { useClassSummaryQuery } from '../services/attendance.query';
+import { sessionLabel, statusLabels } from '../lib/matrix';
 import { ATTENDANCE_ENDPOINTS } from '../services/attendance.endpoints';
+import type { ClassAttendanceMatrix } from '../types';
 
-// CSV goes straight through the existing backend endpoint (a top-level <a download> — same-site
-// GET, SameSite=Lax cookie works, browser handles the download). Excel has no backend endpoint —
-// generated client-side from the already-fetched summary via `xlsx`, since the data's identical
-// either way and a second server-rendered format isn't worth a new endpoint + tests for.
-export function ExportSummaryDropdown({ classId }: { classId: string | undefined }) {
-  const { data: summary } = useClassSummaryQuery(classId);
-
+// CSV goes through the backend's matrix endpoint (same sessionIds filter the on-screen table
+// uses). Excel has no backend endpoint — built client-side from the same matrix data already on
+// screen via `xlsx`, same reasoning as the old per-class summary export.
+export function ExportMatrixDropdown({
+  classId,
+  sessionIds,
+  matrix,
+}: {
+  classId: string | undefined;
+  sessionIds: string[] | undefined;
+  matrix: ClassAttendanceMatrix | undefined;
+}) {
   const exportExcel = () => {
-    if (!classId || !summary) return;
+    if (!classId || !matrix) return;
 
-    const rows = summary.map((entry) => ({
-      Name: entry.name,
-      RegNumber: entry.regNumber ?? '',
-      SessionsPresent: entry.sessionsPresent,
-      TotalSessions: entry.totalSessions,
-      Percentage: `${entry.percentage.toFixed(1)}%`,
-    }));
+    const rows = matrix.rows.map((row) => {
+      const record: Record<string, string | number> = { Name: row.name, RegNumber: row.regNumber ?? '' };
+      for (const session of matrix.sessions) {
+        const status = row.statuses[session.id];
+        record[sessionLabel(session)] = status ? statusLabels[status] : '';
+      }
+      record.Percentage = `${row.percentage.toFixed(1)}%`;
+      return record;
+    });
+
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance');
-    XLSX.writeFile(workbook, `class-${classId}-attendance.xlsx`);
+    XLSX.writeFile(workbook, `class-${classId}-attendance-matrix.xlsx`);
   };
 
   if (!classId) {
@@ -51,12 +60,16 @@ export function ExportSummaryDropdown({ classId }: { classId: string | undefined
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
-          <a href={`${env.NEXT_PUBLIC_API_URL}${ATTENDANCE_ENDPOINTS.classSummaryExport(classId)}`} download className="cursor-pointer">
+          <a
+            href={`${env.NEXT_PUBLIC_API_URL}${ATTENDANCE_ENDPOINTS.classMatrixExport(classId, sessionIds)}`}
+            download
+            className="cursor-pointer"
+          >
             <HugeiconsIcon icon={Csv02Icon} size={16} />
             CSV
           </a>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={exportExcel} disabled={!summary}>
+        <DropdownMenuItem onSelect={exportExcel} disabled={!matrix}>
           <HugeiconsIcon icon={Xls02Icon} size={16} />
           Excel
         </DropdownMenuItem>

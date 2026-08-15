@@ -37,3 +37,18 @@ export const useEnrollStudentMutation = (classId: string) => {
     },
   });
 };
+
+// "Allow everyone" — enrolls every seeded student not already in the class in one call, instead
+// of the one-regNumber-at-a-time flow above.
+export const useEnrollAllStudentsMutation = (classId: string) => {
+  return useMutation<{ enrolled: number }, ApiError, void>({
+    mutationFn: async () => {
+      try {
+        const { data } = await api.post<ApiResponse<{ enrolled: number }>>(CLASSES_ENDPOINTS.enrollAll(classId));
+        return validateApiResponse<{ enrolled: number }>(data);
+      } catch (error) {
+        throw handleApiError(error);
+      }
+    },
+  });
+};

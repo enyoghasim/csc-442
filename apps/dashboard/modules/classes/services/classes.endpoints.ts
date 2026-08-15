@@ -3,4 +3,5 @@ export const CLASSES_ENDPOINTS = {
   create: '/api/classes',
   update: (id: string) => `/api/classes/${id}`,
   enroll: (id: string) => `/api/classes/${id}/enrollments`,
+  enrollAll: (id: string) => `/api/classes/${id}/enrollments/all`,
 } as const;

@@ -31,3 +31,21 @@ export const useScheduleSessionMutation = () => {
     }),
   );
 };
+
+// Invalidating the list refreshes every session's startsAt/endsAt from the server — which is what
+// flips isSessionActive() back to false for this one, in turn hiding "End session" and pausing
+// the QR poll, without either needing to know the mutation happened.
+export const useEndSessionMutation = () => {
+  return useMutation<ClassSession, ApiError, string>(
+    buildMutationOptions(sessionKeys.lists(), {
+      mutationFn: async (sessionId) => {
+        try {
+          const { data } = await api.patch<ApiResponse<ClassSession>>(SESSIONS_ENDPOINTS.end(sessionId));
+          return validateApiResponse<ClassSession>(data);
+        } catch (error) {
+          throw handleApiError(error);
+        }
+      },
+    }),
+  );
+};

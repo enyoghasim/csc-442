@@ -17,13 +17,27 @@ export interface SessionRosterEntry {
   checkedInAt: string | null;
 }
 
-// GET /api/attendance/classes/:classId/summary — sessions-present / total-sessions percentage
-// per student across the whole class.
-export interface ClassAttendanceSummaryEntry {
+// GET /api/attendance/classes/:classId/matrix — student x session grid, optionally narrowed to a
+// chosen subset of sessions via the `sessionIds` query param.
+export interface ClassAttendanceMatrixSession {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface ClassAttendanceMatrixRow {
   studentId: string;
   name: string;
   regNumber: string | null;
+  // Keyed by classSessionId. A session with no key here hasn't ended yet — not the same as
+  // 'absent', which means it ended with no check-in record.
+  statuses: Record<string, AttendanceStatus | 'absent'>;
   sessionsPresent: number;
   totalSessions: number;
   percentage: number;
+}
+
+export interface ClassAttendanceMatrix {
+  sessions: ClassAttendanceMatrixSession[];
+  rows: ClassAttendanceMatrixRow[];
 }
