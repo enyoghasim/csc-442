@@ -9,7 +9,6 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Placeholder call to prove the client is wired — see modules/shared/components/home-screen.tsx
 export async function pingHealth() {
   const { data } = await api.get('/api/health');
   return data;
