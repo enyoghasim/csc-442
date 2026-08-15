@@ -37,7 +37,6 @@ export class ClassesService {
     }
   }
 
-  // Lecturers see classes they teach; students see classes they're enrolled in.
   async listForCurrentUser(userId: string): Promise<Class[]> {
     const user = await this.usersRepository.findById(userId);
     if (!user) throw new UnauthorizedException('Session user no longer exists');

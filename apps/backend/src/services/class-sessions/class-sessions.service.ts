@@ -58,8 +58,7 @@ export class ClassSessionsService {
     });
   }
 
-  // Lecturers see sessions for classes they teach; students see sessions for classes they're
-  // enrolled in — same role-aware pattern as ClassesService.listForCurrentUser.
+  // Same role-aware pattern as ClassesService.listForCurrentUser.
   async listForCurrentUser(userId: string): Promise<ClassSession[]> {
     const user = await this.usersRepository.findById(userId);
     if (!user) throw new UnauthorizedException('Session user no longer exists');

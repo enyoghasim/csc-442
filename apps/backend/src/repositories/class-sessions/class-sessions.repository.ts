@@ -33,7 +33,6 @@ export class ClassSessionsRepository {
       .where(eq(classSessions.classId, classId));
   }
 
-  // Sessions for classes the lecturer teaches.
   async findByLecturer(
     lecturerId: string,
     executor: DbExecutor = this.databaseService.db,
@@ -45,7 +44,6 @@ export class ClassSessionsRepository {
       .where(eq(classes.lecturerId, lecturerId));
   }
 
-  // Sessions for classes the student is enrolled in.
   async findByStudent(
     studentId: string,
     executor: DbExecutor = this.databaseService.db,
