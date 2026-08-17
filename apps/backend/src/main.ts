@@ -12,8 +12,14 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix('api');
-  app.enableCors({ origin: true, credentials: true });
+  const allowedOrigins = env.ALLOWED_ORIGINS
+    ? env.ALLOWED_ORIGINS.split(',').map((origin) => origin.trim())
+    : true;
+
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+  });
   app.use(sessionMiddleware);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new HttpExceptionFilter());

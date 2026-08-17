@@ -15,6 +15,7 @@ const envSchema = z.object({
   SESSION_TTL_SECONDS: z.coerce.number().default(604800),
   SESSION_SECRET: z.string().default('dev-secret-change-me'),
   BACKEND_PORT: z.coerce.number().default(3001),
+  ALLOWED_ORIGINS: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
