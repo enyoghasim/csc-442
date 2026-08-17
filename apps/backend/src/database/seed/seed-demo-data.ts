@@ -19,7 +19,6 @@ import {
 // past sessions plus attendance records with realistic, non-uniform per-student attendance — so
 // the reports page (metrics, per-class summary, matrix export) has something worth looking at.
 // Safe to re-run: tops up sessions/enrollments/records rather than duplicating them.
-const SESSIONS_PER_CLASS = 8;
 const SESSION_HOUR_UTC = 9;
 const STUDENTS_PER_CLASS = 45;
 
@@ -57,21 +56,56 @@ async function main() {
     throw new Error('No seeded lecturer found — run `pnpm db:seed` first.');
   }
 
-  const lecturerClasses = await db
+  let lecturerClasses = await db
     .select()
     .from(classes)
     .where(eq(classes.lecturerId, lecturer.id));
+
   if (lecturerClasses.length === 0) {
-    throw new Error(
-      'Lecturer has no classes yet — create at least one via the dashboard first.',
+    console.log(
+      'No classes found for lecturer — creating default demo classes...',
     );
+    const defaultClasses = [
+      { name: 'Systems Programming', code: 'CSC 422', lecturerId: lecturer.id },
+      {
+        name: 'Database Architecture',
+        code: 'CSC 411',
+        lecturerId: lecturer.id,
+      },
+      {
+        name: 'Software Engineering',
+        code: 'CSC 403',
+        lecturerId: lecturer.id,
+      },
+    ];
+    lecturerClasses = await db
+      .insert(classes)
+      .values(defaultClasses)
+      .returning();
   }
 
   const students = await db
     .select()
     .from(users)
     .where(eq(users.role, 'student'));
+
+  // Define date range: May 1, 2026 to August 17, 2026
+  const startDate = new Date('2026-05-01T00:00:00Z');
+  const endDate = new Date('2026-08-17T23:59:59Z');
   const now = new Date();
+
+  // Schedule weekly sessions (every 7 days) between May and August
+  const sessionDates: Date[] = [];
+  const currentDate = new Date(startDate);
+  // Set session to Wednesday at 9:00 AM UTC
+  const dayOffset = (3 - currentDate.getUTCDay() + 7) % 7;
+  currentDate.setUTCDate(currentDate.getUTCDate() + dayOffset);
+  currentDate.setUTCHours(SESSION_HOUR_UTC, 0, 0, 0);
+
+  while (currentDate <= endDate) {
+    sessionDates.push(new Date(currentDate));
+    currentDate.setUTCDate(currentDate.getUTCDate() + 7);
+  }
 
   for (const klass of lecturerClasses) {
     const random = mulberry32(hashCode(klass.id));
@@ -96,18 +130,16 @@ async function main() {
       .from(classSessions)
       .where(eq(classSessions.classId, klass.id));
 
-    const sessionsToCreate = Math.max(
-      0,
-      SESSIONS_PER_CLASS - existingSessions.length,
+    const existingTimes = new Set(
+      existingSessions.map((s) => s.startsAt.toISOString()),
     );
-    const newSessionRows = Array.from({ length: sessionsToCreate }, (_, i) => {
-      const weeksAgo = sessionsToCreate - i;
-      const startsAt = new Date(now);
-      startsAt.setUTCDate(startsAt.getUTCDate() - weeksAgo * 7);
-      startsAt.setUTCHours(SESSION_HOUR_UTC, 0, 0, 0);
-      const endsAt = new Date(startsAt.getTime() + 2 * 60 * 60 * 1000);
-      return { classId: klass.id, startsAt, endsAt };
-    });
+
+    const newSessionRows = sessionDates
+      .filter((d) => !existingTimes.has(d.toISOString()))
+      .map((startsAt) => {
+        const endsAt = new Date(startsAt.getTime() + 2 * 60 * 60 * 1000);
+        return { classId: klass.id, startsAt, endsAt };
+      });
 
     const insertedSessions =
       newSessionRows.length > 0
@@ -120,13 +152,11 @@ async function main() {
 
     const records: (typeof attendanceRecords.$inferInsert)[] = [];
     for (const student of roster) {
-      // A per-student reliability score biases their attendance across the whole class, instead
-      // of every session being an independent coin flip — gives the metrics/percentages real
-      // spread (some consistently strong, some borderline, a few genuinely at-risk).
-      const reliability = 0.55 + random() * 0.4; // 55%-95%
+      // Per-student reliability score biases attendance (55% - 95%) with randomized variation
+      const reliability = 0.55 + random() * 0.4;
       for (const session of heldSessions) {
         const roll = random();
-        if (roll > reliability) continue; // absent — synthesized automatically, no row needed
+        if (roll > reliability) continue; // absent
         const status: 'present' | 'late' =
           roll > reliability - 0.08 ? 'late' : 'present';
         records.push({
@@ -134,7 +164,7 @@ async function main() {
           studentId: student.id,
           status,
           checkedInAt: new Date(
-            session.startsAt.getTime() + random() * 10 * 60 * 1000,
+            session.startsAt.getTime() + random() * 15 * 60 * 1000,
           ),
         });
       }
@@ -145,7 +175,7 @@ async function main() {
     }
 
     console.log(
-      `${klass.name} (${klass.code}): ${roster.length} enrolled, ${sessionsToCreate} new session(s), ${records.length} attendance record(s) seeded.`,
+      `${klass.name} (${klass.code}): ${roster.length} enrolled, ${heldSessions.length} total held session(s) (May-Aug), ${records.length} attendance record(s) seeded.`,
     );
   }
 
