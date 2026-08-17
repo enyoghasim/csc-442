@@ -137,7 +137,7 @@ export class AttendanceService {
     month: number,
     year: number,
   ): Promise<DayAttendance[]> {
-    const [sessions, records] = await Promise.all([
+    const [{ items: sessions }, records] = await Promise.all([
       this.classSessionsRepository.findByStudent(studentId),
       this.attendanceRecordsRepository.findByStudent(studentId),
     ]);

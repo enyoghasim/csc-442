@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { eq, getTableColumns } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns, lt } from 'drizzle-orm';
 import { DatabaseService } from '../../database/database.service';
 import { classSessions, classes, enrollments } from '../../database/schema';
 import type { DbExecutor } from '../../database/database.types';
@@ -35,24 +35,66 @@ export class ClassSessionsRepository {
 
   async findByLecturer(
     lecturerId: string,
+    options?: { cursor?: string; limit?: number },
     executor: DbExecutor = this.databaseService.db,
-  ): Promise<ClassSession[]> {
-    return executor
+  ): Promise<{ items: ClassSession[]; nextCursor: string | null }> {
+    const limit = options?.limit ?? 20;
+    const query = executor
       .select(getTableColumns(classSessions))
       .from(classSessions)
       .innerJoin(classes, eq(classSessions.classId, classes.id))
-      .where(eq(classes.lecturerId, lecturerId));
+      .where(
+        options?.cursor
+          ? and(
+              eq(classes.lecturerId, lecturerId),
+              lt(classSessions.startsAt, new Date(options.cursor)),
+            )
+          : eq(classes.lecturerId, lecturerId),
+      )
+      .orderBy(desc(classSessions.startsAt), desc(classSessions.id))
+      .limit(limit + 1);
+
+    const rows = await query;
+    let nextCursor: string | null = null;
+
+    if (rows.length > limit) {
+      const nextItem = rows.pop();
+      nextCursor = nextItem ? nextItem.startsAt.toISOString() : null;
+    }
+
+    return { items: rows, nextCursor };
   }
 
   async findByStudent(
     studentId: string,
+    options?: { cursor?: string; limit?: number },
     executor: DbExecutor = this.databaseService.db,
-  ): Promise<ClassSession[]> {
-    return executor
+  ): Promise<{ items: ClassSession[]; nextCursor: string | null }> {
+    const limit = options?.limit ?? 20;
+    const query = executor
       .select(getTableColumns(classSessions))
       .from(classSessions)
       .innerJoin(enrollments, eq(classSessions.classId, enrollments.classId))
-      .where(eq(enrollments.studentId, studentId));
+      .where(
+        options?.cursor
+          ? and(
+              eq(enrollments.studentId, studentId),
+              lt(classSessions.startsAt, new Date(options.cursor)),
+            )
+          : eq(enrollments.studentId, studentId),
+      )
+      .orderBy(desc(classSessions.startsAt), desc(classSessions.id))
+      .limit(limit + 1);
+
+    const rows = await query;
+    let nextCursor: string | null = null;
+
+    if (rows.length > limit) {
+      const nextItem = rows.pop();
+      nextCursor = nextItem ? nextItem.startsAt.toISOString() : null;
+    }
+
+    return { items: rows, nextCursor };
   }
 
   async insert(

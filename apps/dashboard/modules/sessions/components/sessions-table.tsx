@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { useClassesQuery } from '@/modules/classes/services/classes.query';
 import { formatDateTime } from '@/modules/shared/lib/util';
 import { EndSessionButton } from './end-session-button';
-import { useSessionsQuery } from '../services/sessions.query';
+import { useSessionsInfiniteQuery } from '../services/sessions.query';
 import { isSessionActive } from '../lib/status';
 
 // A session's active-ness is time-based, not query-driven, so nothing naturally triggers a
@@ -24,13 +25,21 @@ function useActiveTick() {
 }
 
 export function SessionsTable() {
-  const { data: sessions, isLoading, isError } = useSessionsQuery();
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useSessionsInfiniteQuery();
   const { data: classes } = useClassesQuery();
   const [filter, setFilter] = useState<'all' | 'active'>('all');
   useActiveTick();
 
+  const sessions = data?.pages.flatMap((page) => page.items) ?? [];
   const classNameById = new Map(classes?.map((klass) => [klass.id, `${klass.name} (${klass.code})`]));
-  const filteredSessions = sessions?.filter((session) => filter === 'all' || isSessionActive(session));
+  const filteredSessions = sessions.filter((session) => filter === 'all' || isSessionActive(session));
 
   return (
     <div className="flex flex-col gap-3">
@@ -68,7 +77,7 @@ export function SessionsTable() {
             </TableRow>
           )}
 
-          {!isLoading && !isError && filteredSessions?.length === 0 && (
+          {!isLoading && !isError && filteredSessions.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                 {filter === 'active' ? 'No sessions are live right now.' : 'No sessions scheduled'}
@@ -76,7 +85,7 @@ export function SessionsTable() {
             </TableRow>
           )}
 
-          {filteredSessions?.map((session) => {
+          {filteredSessions.map((session) => {
             const active = isSessionActive(session);
             return (
               <TableRow key={session.id}>
@@ -99,6 +108,17 @@ export function SessionsTable() {
           })}
         </TableBody>
       </Table>
+
+      {hasNextPage && (
+        <Button
+          variant="outline"
+          className="self-center"
+          onClick={() => void fetchNextPage()}
+          disabled={isFetchingNextPage}
+        >
+          {isFetchingNextPage ? 'Loading more...' : 'Load more'}
+        </Button>
+      )}
     </div>
   );
 }

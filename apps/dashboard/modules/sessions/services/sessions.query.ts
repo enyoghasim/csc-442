@@ -1,18 +1,29 @@
-import { useQuery } from '@tanstack/react-query';
-import type { ApiResponse, QrTokenResponse } from '@attendance/shared';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import type { ApiResponse, PaginatedResponse, QrTokenResponse } from '@attendance/shared';
 import { api } from '@/modules/shared/lib/api';
 import { sessionKeys } from '@/modules/shared/services/query-keys';
 import type { ClassSession } from '../types';
 import { SESSIONS_ENDPOINTS } from './sessions.endpoints';
 
-export const useSessionsQuery = () => {
-  return useQuery({
+export const useSessionsInfiniteQuery = () => {
+  return useInfiniteQuery({
     queryKey: sessionKeys.lists(),
-    queryFn: async () => {
-      const { data } = await api.get<ApiResponse<ClassSession[]>>(SESSIONS_ENDPOINTS.list);
-      return data.data ?? [];
+    queryFn: async ({ pageParam }) => {
+      const url = pageParam
+        ? `${SESSIONS_ENDPOINTS.list}?cursor=${encodeURIComponent(pageParam)}`
+        : SESSIONS_ENDPOINTS.list;
+      const { data } = await api.get<ApiResponse<PaginatedResponse<ClassSession>>>(url);
+      return data.data ?? { items: [], nextCursor: null };
     },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
+};
+
+export const useSessionsQuery = () => {
+  const query = useSessionsInfiniteQuery();
+  const sessions = query.data?.pages.flatMap((page) => page.items) ?? [];
+  return { ...query, data: sessions };
 };
 
 // Polls the rotating QR token so the displayed code stays live — authenticator-app-style timing:

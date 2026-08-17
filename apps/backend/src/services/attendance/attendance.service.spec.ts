@@ -196,11 +196,10 @@ describe('AttendanceService', () => {
     };
 
     it('returns one dense entry per day of the month, absent for a past session with no record, empty for a future one', async () => {
-      classSessionsRepository.findByStudent.mockResolvedValue([
-        activeSession,
-        pastSession,
-        futureSession,
-      ]);
+      classSessionsRepository.findByStudent.mockResolvedValue({
+        items: [activeSession, pastSession, futureSession],
+        nextCursor: null,
+      });
       attendanceRecordsRepository.findByStudent.mockResolvedValue([
         {
           classSessionId: activeSession.id,

@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -16,7 +17,7 @@ import type { Request } from 'express';
 import { UserRole } from '@attendance/shared';
 import { ClassSessionsService } from '../services/class-sessions/class-sessions.service';
 import { successResponse } from '../common/utils/response-factory';
-import { ScheduleClassSessionRequest } from '../dtos/sessions.dto';
+import { ListSessionsQuery, ScheduleClassSessionRequest } from '../dtos/sessions.dto';
 import { SessionAuthGuard } from '../common/guards/session-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -36,11 +37,12 @@ export class SessionsController {
 
   @Get()
   @ListSessionsDocs()
-  async list(@Req() request: Request) {
-    const sessions = await this.classSessionsService.listForCurrentUser(
+  async list(@Req() request: Request, @Query() query: ListSessionsQuery) {
+    const res = await this.classSessionsService.listForCurrentUser(
       request.currentUserId!,
+      query,
     );
-    return successResponse(sessions);
+    return successResponse(res);
   }
 
   @Post()

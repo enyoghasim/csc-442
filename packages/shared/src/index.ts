@@ -25,6 +25,11 @@ export interface ApiResponse<T = unknown> {
   message?: string;
 }
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
 // Mirrors apps/backend's PublicUser shape verbatim (common/utils/serialize-user.ts) — camelCase,
 // allow-list (passwordHash never present). Dates are ISO strings over the wire, not Date objects.
 export interface PublicUser {

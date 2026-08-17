@@ -131,20 +131,28 @@ describe('ClassSessionsService', () => {
   describe('listForCurrentUser', () => {
     it('lists sessions for a lecturer', async () => {
       usersRepository.findById.mockResolvedValue({ role: 'lecturer' } as User);
-      classSessionsRepository.findByLecturer.mockResolvedValue([activeSession]);
+      classSessionsRepository.findByLecturer.mockResolvedValue({
+        items: [activeSession],
+        nextCursor: null,
+      });
 
-      await expect(service.listForCurrentUser(lecturerId)).resolves.toEqual([
-        activeSession,
-      ]);
+      await expect(service.listForCurrentUser(lecturerId)).resolves.toEqual({
+        items: [activeSession],
+        nextCursor: null,
+      });
     });
 
     it('lists sessions for a student', async () => {
       usersRepository.findById.mockResolvedValue({ role: 'student' } as User);
-      classSessionsRepository.findByStudent.mockResolvedValue([activeSession]);
+      classSessionsRepository.findByStudent.mockResolvedValue({
+        items: [activeSession],
+        nextCursor: null,
+      });
 
-      await expect(service.listForCurrentUser('student-1')).resolves.toEqual([
-        activeSession,
-      ]);
+      await expect(service.listForCurrentUser('student-1')).resolves.toEqual({
+        items: [activeSession],
+        nextCursor: null,
+      });
     });
 
     it('throws Unauthorized when the session user no longer exists', async () => {

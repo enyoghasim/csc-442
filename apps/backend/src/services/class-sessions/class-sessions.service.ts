@@ -58,14 +58,17 @@ export class ClassSessionsService {
     });
   }
 
-  // Same role-aware pattern as ClassesService.listForCurrentUser.
-  async listForCurrentUser(userId: string): Promise<ClassSession[]> {
+  // Same role-aware pattern as ClassesService.listForCurrentUser, now with cursor pagination.
+  async listForCurrentUser(
+    userId: string,
+    query?: { cursor?: string; limit?: number },
+  ): Promise<{ items: ClassSession[]; nextCursor: string | null }> {
     const user = await this.usersRepository.findById(userId);
     if (!user) throw new UnauthorizedException('Session user no longer exists');
 
     return user.role === 'lecturer'
-      ? this.classSessionsRepository.findByLecturer(userId)
-      : this.classSessionsRepository.findByStudent(userId);
+      ? this.classSessionsRepository.findByLecturer(userId, query)
+      : this.classSessionsRepository.findByStudent(userId, query);
   }
 
   // Rotates the QR check-in token: a fresh random token replaces whatever was in Redis, with a
