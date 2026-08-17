@@ -29,7 +29,7 @@ RUN chown -R backend:nodejs /app
 USER backend
 
 ENV NODE_ENV=production
-EXPOSE 6789
+EXPOSE 3001
 WORKDIR /app/apps/backend
 # drizzle-kit migrate is idempotent (tracks applied migrations), safe to run on every boot —
 # keeps a single-instance deploy self-migrating without a separate release step.

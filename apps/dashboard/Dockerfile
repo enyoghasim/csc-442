@@ -31,5 +31,5 @@ COPY --from=installer /app/apps/dashboard/.next/static ./apps/dashboard/.next/st
 USER dashboard
 
 ENV NODE_ENV=production
-EXPOSE 3000
+EXPOSE 7890
 CMD ["node", "apps/dashboard/server.js"]
