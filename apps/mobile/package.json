@@ -20,15 +20,15 @@
     "@tanstack/react-query": "^5.62.7",
     "axios": "^1.7.9",
     "clsx": "^2.1.1",
-    "expo": "~57.0.13",
+    "expo": "~57.0.14",
     "expo-camera": "~57.0.3",
-    "expo-constants": "~57.0.11",
+    "expo-constants": "~57.0.12",
     "expo-font": "~57.0.1",
     "expo-haptics": "~57.0.1",
     "expo-linking": "~57.0.6",
-    "expo-router": "~57.0.13",
+    "expo-router": "~57.0.14",
     "expo-secure-store": "~57.0.1",
-    "expo-splash-screen": "~57.0.6",
+    "expo-splash-screen": "~57.0.7",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.2",
     "expo-updates": "~57.0.15",
@@ -43,7 +43,7 @@
     "react-native-reanimated": "~4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
-    "react-native-svg": "^15.11.2",
+    "react-native-svg": "15.15.4",
     "react-native-worklets": "~0.10.1",
     "tailwind-merge": "^3.6.0",
     "zod": "^3.24.1",
@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "^7.25.9",
+    "@expo/metro-runtime": "^57.0.11",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "~57.0.7",
     "eslint": "^9.18.0",
@@ -58,5 +59,12 @@
     "eslint-config-prettier": "^10.0.1",
     "tailwindcss": "^3.4.17",
     "typescript": "~6.0.3"
+  },
+  "expo": {
+    "doctor": {
+      "exclude": [
+        "schema-validation"
+      ]
+    }
   }
 }
